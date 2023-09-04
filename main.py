@@ -124,6 +124,7 @@ INSERT INTO order_menu(
 #     db_con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 #     cur.execute(sql.SQL("CREATE TABLE IF NOT EXISTS test_table (id int);"))
 
+global order
 
 @app.get("/")
 async def root():
@@ -140,12 +141,22 @@ async def root():
     json_compatible_item_data = jsonable_encoder(result)
     return JSONResponse(content=json_compatible_item_data)
 
+@app.get("/menus")
+async def root():
+    cur = con.cursor()
+    cur.execute("SELECT * FROM menu")
+    result = cur.fetchall()
+    if result is None:
+        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
+    con.commit()
+    json_compatible_item_data = jsonable_encoder(result)
+    return JSONResponse(content=json_compatible_item_data)
 @app.post("/orders")
 def add_order(orderDTO: OrderDTO):
     cur = con.cursor()
 
-    insert_menu_script = "Insert into menu(id,named,types,cost) VALUES (%s,%s,%s,%s)"
-    insert_orders_script = "Insert into orders(id,created_date,updated_date,address) VALUES (%s,%s,%s,%s)"
+    # insert_menu_script = "Insert into menu(id,named,types,cost) VALUES (%s,%s,%s,%s)"
+    insert_orders_script = "Insert into orders(created_date,updated_date,address) VALUES (%s,%s,%s)"
     insert_menu_orders_script = "Insert into order_products(order_id, menu_id) VALUES (%s,%s)"
 
 
@@ -161,6 +172,46 @@ def add_order(orderDTO: OrderDTO):
 
     con.commit()
 
+@app.post("/orders")
+def add_order(message: str):
+    cur.execute("SELECT types from menu");
+    result = cur.fetchall()
+    if result is None:
+        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
+    products : List
+    while True :
+        for type in result:
+            if str == ("I'd like a " + type):
+                print("which do you prefer?")
+                # str = someMessage
+                cur.execute("SELECT named from menu");
+                result2 = cur.fetchall()
+                if result is None:
+                    return JSONResponse(content="product haven't found", status_code=status.HTTP_404_NOT_FOUND)
+                for name in result2:
+                    if (str == "I'd like a " + name):
+                        products.append(name)
+            elif str == ("I don't want a " + name):
+                products.remove(name)
+            elif str == "That's all":
+                print("Enter address: ")
+                address = "ANY ADDRESS"
+                order = OrderDTO
+                order.address = address
+                for product in products:
+                    select_script = cur.execute("SELECT * from menu where name = %s");
+                    select_value = (product,)
+                    cur.execute(select_script, select_value)
+                    order.products.append(cur.fetchone())
+                add_order(order)
+                break
+            elif str == ("Yes, please"):
+                name = "dsd"
+            elif str == ("No, thank you"):
+                name = "dsd"
+            else:
+                print("Sorry, i don't understand you!")
+                print("Try again :)")
 @app.get("/hello/{name}")
 async def say_hello(name: str):
     return {"message": f"Hello {name}"}
