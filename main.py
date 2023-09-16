@@ -39,7 +39,7 @@ class OrderiDTO(BaseModel):
     order_products: List[Menu]
     total:str
 
-sql_schript1 = """  
+sql_schript1 = """      
 CREATE TABLE IF NOT EXISTS menu (
     id integer PRIMARY KEY,
     named character varying(255) COLLATE pg_catalog."default",
@@ -143,7 +143,7 @@ def startProgramMessege():
         start = False
         return "Welcome at the coffee shoP What would you like?"
 @app.get("/handler/{message}")
-async def root(message: str):
+async def handler(message: str):
     global flag
     global start
     if start:
