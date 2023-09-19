@@ -127,9 +127,16 @@ INSERT INTO order_menu(
 #     cur.execute(sql.SQL("CREATE TABLE IF NOT EXISTS test_table (id int);"))
 
 products = []
+newProductType = ""
+newProductName = ""
+newProductCost = ""
 chatHistory = []
+
+lastAdminAssistantResponce = ""
+
 flag = False
 start = False
+startAdmin = True
 
 import openai
 
@@ -143,6 +150,39 @@ def startProgramMessege():
     if start:
         start = False
         return "Welcome at the coffee shoP What would you like?"
+@app.get("/admin/handler/{message}")
+async def handler(message: str):
+    global startAdmin
+    global lastAdminAssistantResponce
+    global newProductType
+    global newProductName
+    global newProductCost
+
+    if startAdmin:
+        newProductType = message
+        startAdmin = False
+        lastAdminAssistantResponce = "Enter the name of product"
+        return lastAdminAssistantResponce
+    elif lastAdminAssistantResponce is "Enter the name of product":
+        if checkIfCurrentProductExist(message):
+            return "Product with current name has already exist. Try again to write the product's name:"
+        newProductName = message
+        lastAdminAssistantResponce = "Enter the costs:"
+        return lastAdminAssistantResponce
+    elif lastAdminAssistantResponce == "Enter the costs:":
+        newProductCost = message
+        if not message.isdecimal():
+            return "the cost's must be num. Try again"
+        newProduct = (newProductName,newProductType,newProductCost,)
+        addNewProduct(newProduct)
+        startAdmin = True
+        return "The product has been successfully added. Enter the Type of product"
+    else:
+        return "Something goes wrong ;("
+
+
+
+
 @app.get("/handler/{message}")
 async def handler(message: str):
     global flag
@@ -418,3 +458,28 @@ def addChatHistory():
         print(message[0])
         insert_orders_value = (id[0], message[0], message[1],)
         cur.execute(insert_order_messages_script, insert_orders_value)
+
+@app.post("/addNewProduct/")
+def addNewProduct(newProduct):
+    insertScript = "Insert into menu(id, named, types, cost) VALUES (%s,%s, %s,%s)"
+    print("newProduct[2]")
+    print(newProduct[2])
+    print(newProduct[1])
+    print(newProduct[1])
+    insertValue = (6,newProduct[0],newProduct[1],int(newProduct[2]),)
+    cur.execute(insertScript,insertValue)
+    con.commit()
+
+
+def checkIfCurrentProductExist(message):
+    selectScript = "select named from menu where named = %s"
+    selectValue = (message,)
+    cur.execute(selectScript,selectValue)
+    result = cur.fetchall()
+    print(result)
+    if result.__len__() == 0:
+        print("FALSE")
+        return False
+    else:
+        print("TRUE")
+        return True
