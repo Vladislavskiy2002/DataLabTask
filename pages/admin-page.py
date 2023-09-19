@@ -43,25 +43,6 @@ conn = psycopg2.connect(
     password='1234',
     host='localhost'
 )
-# Function to fetch and display user orders
-# def display_user_orders(user_id):
-#     with conn.cursor() as cursor:
-#         cursor.execute("SELECT * FROM orders")
-#         orders = cursor.fetchall()
-#         if orders:
-#             st.subheader(f'Orders for User {user_id}')
-#             for order in orders:
-#                 st.write(order)
-#         else:
-#             st.write(f"No orders found for User {user_id}")
-# #
-# # Get a list of distinct user IDs
-# with conn.cursor() as cursor:
-#     cursor.execute("SELECT DISTINCT user_id FROM orders")
-#     user_ids = [row[0] for row in cursor.fetchall()]
-#
-# # Select a user to display their orders
-# selected_user = st.selectbox("Select User", user_ids)
 
 # Create a Streamlit app
 st.title('Admin view')
@@ -75,21 +56,26 @@ def display_all_orders():
         df = pd.DataFrame(orders, columns=["id", "created_date", "updated_date", "address"])
         # Calculate the total sum of all orders
         total_orders = len(df)
-
+        total_orders_sum = requests.get("http://127.0.0.1:8000/allproducts/totalsum").json()
+        st.write(f"Total Orders sum : {total_orders_sum[0]}")
+        average_orders_sum = requests.get("http://127.0.0.1:8000/allproducts/averagesum").json()
+        st.write(f"Average Orders sum : {average_orders_sum[0]}")
         # Display the total sum above the table
         st.write(f"Total Orders: {total_orders}")
-
         # Reset the index to start from 1
+        df.index = df.index + 1
+
+        st.dataframe(df)
+
+        totalbyeveryproduct = requests.get("http://127.0.0.1:8000/allproducts/totalevery").json()
+        df = pd.DataFrame(totalbyeveryproduct, columns=["name", "total sale"])
         df.index = df.index + 1
 
         st.dataframe(df)
     else:
         st.write("No orders found")
 
-# Display all orders as a table
 display_all_orders()
-
-# Close the database connection
 conn.close()
 
 # df = pd.DataFrame(orders, columns=["id", "created_date", "updated_date", "address"])

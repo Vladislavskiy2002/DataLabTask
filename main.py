@@ -127,6 +127,7 @@ INSERT INTO order_menu(
 #     cur.execute(sql.SQL("CREATE TABLE IF NOT EXISTS test_table (id int);"))
 
 products = []
+chatHistory = []
 flag = False
 start = False
 
@@ -148,16 +149,20 @@ async def handler(message: str):
     global start
     if start:
         start = False
+        chatHistory.append(("Welcome at the coffee shop \n What would you like?"))
         return "Welcome at the coffee shop \n What would you like? "
     if flag:
         if message == "yes":
             flag = False
             products.append("deer")
+            chatHistory.append((message, "The deer has been successfully added to your order"))
             return "The deer has been successfully added to your order"
         elif message == "no":
             flag = False
+            chatHistory.append((message,"Would you like something else?"))
             return "Would you like something else?"
         else:
+            chatHistory.append((message, "I don't understand you. Try again"))
             return "I don't understand you. Try again"
 
     if message.startswith("I'd like a "):
@@ -165,19 +170,26 @@ async def handler(message: str):
         print("start")
         data = menusByName(prompt)
         if data == prompt.__str__() + " isn't exist in our menu":
+            chatHistory.append((message,prompt.__str__() + " isn't exist in our menu"))
             return prompt.__str__() + " isn't exist in our menu"
         flag = True
+        chatHistory.append((message,"Would you like a deer to your " + prompt.__str__() + "?"))
         return "Would you like a deer to your " + prompt.__str__() + "?"
     elif message.startswith("I don't want a "):
         prompt = message.replace("I don't want a ", '', 1)
         if(products.__len__() ==0):
+            chatHistory.append((message, "You can't do it because you haven't choose any product"))
             return "You can't do it because you haven't choose any product"
+        chatHistory.append((message, "The product has been successful removed from your ass"))
         return removeProduct(prompt)
     elif message.startswith("Show all"):
+        chatHistory.append((message,allproducts()))
         return allproducts()
     elif message.startswith("That's all"):
         total = totalcost()
         add_orderdto(OrderiDTO)
+        addChatHistory()
+        chatHistory.append((message, "Total cost" + total))
         return {"Total cost" : total}
     elif message.startswith("What's"):
         response = openai.Completion.create(
@@ -189,6 +201,7 @@ async def handler(message: str):
         )
         return response.choices[0].text.strip()
     else:
+        chatHistory.append((message, "Sorry, but i don't understand you"))
         return "Sorry, but i don't understand you"
 @app.get("/")
 async def root():
@@ -252,7 +265,6 @@ def menusByName(message:str):
     result = cur.fetchall()
     if result is None or result.__len__() == 0:
         return message + " isn't exist in our menu"
-    # con.commit()
     json_compatible_item_data = jsonable_encoder(result)
     products.append(message)
     print(products)
@@ -341,3 +353,68 @@ def add_orderdto(orders: OrderiDTO):
 @app.get("/hello/{name}")
 async def say_hello(name: str):
     return {"message": f"Hello {name}"}
+
+@app.get("/allproducts/totalsum")
+async def totalsum():
+    cur.execute("SELECT SUM(cost) FROM menu join order_products on order_products.menu_id = menu.id")
+    result = cur.fetchone()
+    print(result)
+    return result
+
+@app.get("/allproducts/averagesum")
+async def averagesum():
+    cur.execute("SELECT AVG(cost) FROM menu join order_products on order_products.menu_id = menu.id")
+    result = cur.fetchone()
+    print(result)
+    return result
+
+@app.get("/allproducts/totalevery")
+async def totalbyeveryproduct():
+    cur.execute("SELECT * from menu")
+    result = cur.fetchall()
+
+    items = []
+
+    for r in result:
+        select_script = ("SELECT SUM(cost) FROM menu JOIN order_products on order_products.menu_id = menu.id where menu.id = %s")
+        select_value = (r[0],)
+        print("ID:")
+        print(r[0])
+        cur.execute(select_script, select_value)
+        sum = cur.fetchone()
+        print("sum:")
+        print(sum)
+        twoitem = [r[1], sum]
+        items.append(twoitem)
+
+    print(items)
+    return items
+
+
+@app.get("/allproducts/chathistory")
+async def getChatHistory():
+    cur.execute("select user_messages, assistant_messages from order_messages")
+    result = cur.fetchall()
+    print(result)
+    return result
+
+@app.get("/allproducts/chathistory/{id}")
+async def getChatHistory(id : int):
+    selectScript = "select user_messages, assistant_messages from order_messages where order_id = %s"
+    selectValue = (id,)
+    print("ID" + id.__str__())
+    cur.execute(selectScript,selectValue)
+    result = cur.fetchall()
+    print(result)
+    return result
+
+@app.post("/addChatHistory/")
+def addChatHistory():
+    cur.execute("SELECT max(id) FROM orders")
+    id = cur.fetchone()
+    insert_order_messages_script = "Insert into order_messages(order_id, user_messages, assistant_messages) VALUES (%s, %s,%s)"
+    for message in chatHistory:
+        print("MESSEGE")
+        print(message[0])
+        insert_orders_value = (id[0], message[0], message[1],)
+        cur.execute(insert_order_messages_script, insert_orders_value)
