@@ -1,4 +1,4 @@
-
+import random
 from datetime import date
 from typing import List
 
@@ -131,6 +131,7 @@ newProductType = ""
 newProductName = ""
 newProductCost = ""
 chatHistory = []
+newRandomProduct = []
 
 lastAdminAssistantResponce = ""
 
@@ -143,7 +144,32 @@ import openai
 openai.api_key = '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'
 
 #
-
+@app.get("/admin/setToDefault")
+def startProgramMessege():
+    global startAdmin
+    startAdmin = True
+    print(startAdmin)
+    return True
+@app.get("/setToDefault")
+def startProgramMessege():
+    global start
+    global flag
+    global lastAdminAssistantResponce
+    global newProductType
+    global newProductName
+    global newProductCost
+    global products
+    global chatHistory
+    global newRandomProduct
+    start = False
+    flag = False
+    lastAdminAssistantResponce=""
+    newProductType=""
+    newProductName=""
+    newProductCost=""
+    products = []
+    chatHistory = []
+    newRandomProduct = []
 @app.get("/startprogram")
 def startProgramMessege():
     global start
@@ -181,12 +207,13 @@ async def handler(message: str):
         return "Something goes wrong ;("
 
 
-
+#
 
 @app.get("/handler/{message}")
 async def handler(message: str):
     global flag
     global start
+    global newRandomProduct
     if start:
         start = False
         chatHistory.append(("Welcome at the coffee shop \n What would you like?"))
@@ -194,9 +221,9 @@ async def handler(message: str):
     if flag:
         if message == "yes":
             flag = False
-            products.append("deer")
-            chatHistory.append((message, "The deer has been successfully added to your order"))
-            return "The deer has been successfully added to your order"
+            products.append(str(newRandomProduct))
+            chatHistory.append((message, "The " + str(newRandomProduct) + " has been successfully added to your order"))
+            return "The " + str(newRandomProduct) + " has been successfully added to your order"
         elif message == "no":
             flag = False
             chatHistory.append((message,"Would you like something else?"))
@@ -213,24 +240,27 @@ async def handler(message: str):
             chatHistory.append((message,prompt.__str__() + " isn't exist in our menu"))
             return prompt.__str__() + " isn't exist in our menu"
         flag = True
-        chatHistory.append((message,"Would you like a deer to your " + prompt.__str__() + "?"))
-        return "Would you like a deer to your " + prompt.__str__() + "?"
+        newRandomProduct = createRandomProduct()
+        chatHistory.append((message,"Would you like to add a " + str(newRandomProduct) + " to your " + prompt.__str__() + "?"))
+        return "Would you like to add a " + str(newRandomProduct) + " to your " + prompt.__str__() + "?"
     elif message.startswith("I don't want a "):
         prompt = message.replace("I don't want a ", '', 1)
         if(products.__len__() ==0):
             chatHistory.append((message, "You can't do it because you haven't choose any product"))
             return "You can't do it because you haven't choose any product"
-        chatHistory.append((message, "The product has been successful removed from your ass"))
-        return removeProduct(prompt)
+        chatHistory.append((message, "The product with name: "+ str(prompt) +" has been successful removed from your list"))
+        removeProduct(prompt)
+        return "The product with name: "+ str(prompt) +" has been successful removed from your list"
     elif message.startswith("Show all"):
-        chatHistory.append((message,allproducts()))
+        result = allproducts()
+        chatHistory.append((message,str(result)))
         return allproducts()
     elif message.startswith("That's all"):
         total = totalcost()
+        chatHistory.append((message, "Total cost $" + total))
         add_orderdto(OrderiDTO)
         addChatHistory()
-        chatHistory.append((message, "Total cost" + total))
-        return {"Total cost" : total}
+        return "Your total is $" + str(total)
     elif message.startswith("What's"):
         response = openai.Completion.create(
             chat = "gpt-3.5-turbo",
@@ -461,12 +491,12 @@ def addChatHistory():
 
 @app.post("/addNewProduct/")
 def addNewProduct(newProduct):
-    insertScript = "Insert into menu(id, named, types, cost) VALUES (%s,%s, %s,%s)"
+    insertScript = "Insert into menu(named, types, cost) VALUES (%s, %s,%s)"
     print("newProduct[2]")
     print(newProduct[2])
     print(newProduct[1])
     print(newProduct[1])
-    insertValue = (6,newProduct[0],newProduct[1],int(newProduct[2]),)
+    insertValue = (newProduct[0],newProduct[1],int(newProduct[2]),)
     cur.execute(insertScript,insertValue)
     con.commit()
 
@@ -483,3 +513,12 @@ def checkIfCurrentProductExist(message):
     else:
         print("TRUE")
         return True
+
+def createRandomProduct():
+    selectScript = "select named from menu"
+    cur.execute(selectScript)
+    result = cur.fetchall()
+    result = random.choice(result)
+    print("RANDOM NAME: " + str(result))
+    return result[0]
+#

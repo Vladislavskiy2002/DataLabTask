@@ -8,15 +8,14 @@ import time
 
 import requests
 
-st.title("COFFEE HISTORY")
+st.title("HISTORY")
 
 st.sidebar.success("MEw-MeW")
 
 
 # Initialize chat history
-if "messages" not in st.session_state:
+if "history-messages" not in st.session_state:
     st.session_state.messages = []
-
 
 # # Display chat messages from history on app rerun
 # for message in st.session_state.messages:
