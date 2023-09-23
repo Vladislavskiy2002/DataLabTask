@@ -1,0 +1,21 @@
+version: '3'
+services:
+  db:
+    container_name: postgres_container
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: test_db
+    ports:
+      - "5432:5432"
+  fastapi:
+      build: .
+      environment:
+        - PYTHONUNBUFFERED=0
+      container_name: "core-api-container"
+      ports:
+            - 80:80
+      volumes:
+        - ./app/:/app

@@ -1,18 +1,14 @@
+import asyncio
 import random
 from datetime import date
 from typing import List
-
 from fastapi.encoders import jsonable_encoder
 from psycopg2 import sql
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # <-- ADD THIS LINE
-import asyncio
 import psycopg2
-
 from fastapi import FastAPI
 from pydantic import BaseModel
-from starlette import status
 from starlette.responses import JSONResponse
-import requests
 
 app = FastAPI()
 
@@ -39,53 +35,74 @@ class OrderiDTO(BaseModel):
     order_products: List[Menu]
     total:str
 
-sql_schript1 = """      
-CREATE TABLE IF NOT EXISTS menu (
-    id integer PRIMARY KEY,
-    named character varying(255) COLLATE pg_catalog."default",
-    types character varying(255) COLLATE pg_catalog."default",
-    cost integer NOT NULL
-);
-"""
-
-sql_schript2 = """
-CREATE TABLE IF NOT EXISTS orders (
-    id INT PRIMARY KEY,
-    created_date DATE NOT NULL,
-    updated_date DATE NOT NULL,
-    address character varying(255) COLLATE pg_catalog."default"
-);
-"""
-
-sql_schript3 = """
-CREATE TABLE IF NOT EXISTS order_menu (
-    id INT PRIMARY KEY,
-    order_id INT,
-    menu_id INT,
-    FOREIGN KEY (order_id) REFERENCES orders(id),
-    FOREIGN KEY (menu_id) REFERENCES menu(id)
-);
-"""
-
-sql_schript4 = """
-INSERT INTO menu(
-	id, named, types, cost)
-	VALUES (365, 'hot-dog', 'bread', 32);
-"""
-sql_schript5 = """
-INSERT INTO orders(
-	id, created_date, updated_date, address)
-	VALUES (251, '2023-09-05', '2023-09-05', 'Князя Романа 23');
-"""
-sql_schript6 = """
-INSERT INTO order_menu(id, order_id, menu_id)
-	VALUES (2,2, 1);
-"""
-sql_schript7 = """	
-INSERT INTO order_menu(
-	id, order_id, menu_id)
-	VALUES (2, 1);
-);"""
+# sql_schript1 = """
+# CREATE TABLE IF NOT EXISTS public.menu
+# (
+#     id integer NOT NULL DEFAULT nextval('menu_id_seq'::regclass),
+#     named character varying(255) COLLATE pg_catalog."default",
+#     types character varying(255) COLLATE pg_catalog."default",
+#     cost integer NOT NULL,
+#     CONSTRAINT menu_pkey PRIMARY KEY (id),
+#     CONSTRAINT menu_id_unique UNIQUE (id)
+# );
+# """
+#
+# sql_schript2 = """
+# CREATE TABLE IF NOT EXISTS public.orders
+# (
+#     id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
+#     created_date date NOT NULL,
+#     updated_date date NOT NULL,
+#     address character varying(255) COLLATE pg_catalog."default",
+#     CONSTRAINT orders_pkey PRIMARY KEY (id)
+# );
+# """
+#
+# sql_schript3 = """
+# CREATE TABLE IF NOT EXISTS order_products (
+#     id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
+#     order_id integer,
+#     menu_id integer,
+#     CONSTRAINT order_products_pkey PRIMARY KEY (id),
+#     CONSTRAINT order_products_menu_id_fkey FOREIGN KEY (menu_id)
+#         REFERENCES public.menu (id) MATCH SIMPLE
+#         ON UPDATE NO ACTION
+#         ON DELETE NO ACTION,
+#     CONSTRAINT order_products_order_id_fkey FOREIGN KEY (order_id)
+#         REFERENCES public.orders (id) MATCH SIMPLE
+#         ON UPDATE NO ACTION
+#         ON DELETE NO ACTION
+# );
+# """
+#
+# sql_schript4 = """
+# CREATE TABLE IF NOT EXISTS public.order_messages
+# (
+#     id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
+#     order_id integer,
+#     assistant_messages character varying(1000) COLLATE pg_catalog."default",
+#     user_messages character varying(1000) COLLATE pg_catalog."default",
+#     CONSTRAINT order_messages_order_id_fkey FOREIGN KEY (order_id)
+#         REFERENCES public.orders (id) MATCH SIMPLE
+#         ON UPDATE NO ACTION
+#         ON DELETE NO ACTION
+# )
+#
+# """
+# sql_schript5 = """
+# INSERT INTO orders(
+# 	id, created_date, updated_date, address)
+# 	VALUES (251, '2023-09-05', '2023-09-05', 'Князя Романа 23');
+# """
+# sql_schript6 = """
+# INSERT INTO order_menu(id, order_id, menu_id)
+# 	VALUES (2,2, 1);
+# """
+# sql_schript7 = """
+# INSERT INTO order_menu(
+# 	id, order_id, menu_id)
+# 	VALUES (2, 1);
+# );"""
 
 # @app.on_event("startup")
 # async def create_database():
@@ -93,34 +110,36 @@ INSERT INTO order_menu(
 #
 #     global con
 #
-#     # con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
-#     con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
+#     con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
+#     # con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
 #
 #     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
 #
 #     cur = con.cursor()
 #
-#     # try:
-#         # cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
-#         # cur.execute(sql.SQL(sql_schript3))
-#         # cur.execute(sql.SQL(sql_schript4))
+#     try:
+#         cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
+#         cur.execute(sql.SQL(sql_schript1))
+#         cur.execute(sql.SQL(sql_schript2))
+#         cur.execute(sql.SQL(sql_schript3))
+#         cur.execute(sql.SQL(sql_schript4))
 #         # cur.execute(sql.SQL(sql_schript5))
 #         # cur.execute(sql.SQL(sql_schript6))
 #         # cur.execute(sql.SQL(sql_schript7))
 #     #
-#     # except:
-#         # cur.execute(sql.SQL("DROP DATABASE datalab_db;"))
-#         # cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
-#         # cur.execute(sql.SQL(sql_schript1))
-#         # cur.execute(sql.SQL(sql_schript2))
-#         # cur.execute(sql.SQL(sql_schript3))
-#         # cur.execute(sql.SQL(sql_schript4))
+#     except:
+#         cur.execute(sql.SQL("DROP DATABASE datalab_db;"))
+#         cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
+#         cur.execute(sql.SQL(sql_schript1))
+#         cur.execute(sql.SQL(sql_schript2))
+#         cur.execute(sql.SQL(sql_schript3))
+#         cur.execute(sql.SQL(sql_schript4))
 #         # cur.execute(sql.SQL(sql_schript5))
 #         # cur.execute(sql.SQL(sql_schript6))
 #         # cur.execute(sql.SQL(sql_schript7))
 #
-#     # db_con = psycopg2.connect(dbname="test", user="postgres", host="db", password="1234"
-#     db_con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
+#     db_con = psycopg2.connect(dbname="test", user="postgres", host="db", password="1234")
+#     # db_con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
 #
 #     cur = db_con.cursor()
 #     db_con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -161,12 +180,14 @@ def startProgramMessege():
     global products
     global chatHistory
     global newRandomProduct
+    global status
     start = False
     flag = False
     lastAdminAssistantResponce=""
     newProductType=""
     newProductName=""
     newProductCost=""
+    status = ""
     products = []
     chatHistory = []
     newRandomProduct = []
@@ -183,14 +204,20 @@ async def handler(message: str):
     global newProductType
     global newProductName
     global newProductCost
+    global status
 
-    if startAdmin:
+    if startAdmin and message == "add" or message == "update":
+        status = message
+        startAdmin = False
+        lastAdminAssistantResponce = "Enter the type of product"
+        return lastAdminAssistantResponce
+    elif lastAdminAssistantResponce is "Enter the type of product":
         newProductType = message
         startAdmin = False
         lastAdminAssistantResponce = "Enter the name of product"
         return lastAdminAssistantResponce
     elif lastAdminAssistantResponce is "Enter the name of product":
-        if checkIfCurrentProductExist(message):
+        if checkIfCurrentProductExistByName(message) and status != "update":
             return "Product with current name has already exist. Try again to write the product's name:"
         newProductName = message
         lastAdminAssistantResponce = "Enter the costs:"
@@ -199,14 +226,22 @@ async def handler(message: str):
         newProductCost = message
         if not message.isdecimal():
             return "the cost's must be num. Try again"
-        newProduct = (newProductName,newProductType,newProductCost,)
-        addNewProduct(newProduct)
-        startAdmin = True
-        return "The product has been successfully added. Enter the Type of product"
+        newProduct = (newProductName, newProductType, newProductCost,)
+        lastAdminAssistantResponce = ""
+        if status == "add":
+            addNewProduct(newProduct)
+            startAdmin = True
+            return "The product has been successfully added. Choose update or add"
+        elif status == "update":
+            startAdmin = True
+            if checkIfCurrentProductExistByName(newProductName) == True and checkIfCurrentProductExistByType(newProductType) == True:
+                updateNewProduct(newProduct)
+                return "The product has been successfully updated. Choose update or add"
+            else:
+                return "The product with name: " + newProductName + " and type: " + newProductType + " isn't exist. Choose update or add"
+
     else:
         return "Something goes wrong ;("
-
-
 #
 
 @app.get("/handler/{message}")
@@ -214,6 +249,7 @@ async def handler(message: str):
     global flag
     global start
     global newRandomProduct
+    global status
     if start:
         start = False
         chatHistory.append(("Welcome at the coffee shop \n What would you like?"))
@@ -248,8 +284,11 @@ async def handler(message: str):
         if(products.__len__() ==0):
             chatHistory.append((message, "You can't do it because you haven't choose any product"))
             return "You can't do it because you haven't choose any product"
-        chatHistory.append((message, "The product with name: "+ str(prompt) +" has been successful removed from your list"))
+        chatHistory.append((message, "The product with name: "+ prompt +" has been successful removed from your list"))
+        print("adasdasd")
+        print(prompt)
         removeProduct(prompt)
+        print("promptgfdgfdg")
         return "The product with name: "+ str(prompt) +" has been successful removed from your list"
     elif message.startswith("Show all"):
         result = allproducts()
@@ -277,6 +316,8 @@ async def handler(message: str):
 async def root():
     return {"message": "Hello World"}
 def totalcost():
+    cur = con.cursor()
+
     global products
     total = 0
     for product in products:
@@ -295,7 +336,8 @@ def removeProduct(name: str):
     select_script = "SELECT * FROM menu where named = %s"
     products.remove(name)
     print(products)
-    return JSONResponse(status_code=status.HTTP_200_OK)
+    # return JSONResponse(status_code=status.HTTP_200_OK)
+    return True
 @app.get("/product/all")
 def allproducts():
     global products
@@ -312,7 +354,7 @@ async def root():
     con.commit()
     json_compatible_item_data = jsonable_encoder(result)
     return JSONResponse(content=json_compatible_item_data)
-
+#
 @app.get("/menus")
 def menus():
     global products
@@ -326,6 +368,8 @@ def menus():
     return JSONResponse(content=json_compatible_item_data)
 @app.get("/menus/{message}")
 def menusByName(message:str):
+    cur = con.cursor()
+
     global products
     # print("fdfdff")
     # return JSONResponse(status_code=status.HTTP_200_OK)    # cur = con.cursor()
@@ -426,6 +470,8 @@ async def say_hello(name: str):
 
 @app.get("/allproducts/totalsum")
 async def totalsum():
+    cur = con.cursor()
+
     cur.execute("SELECT SUM(cost) FROM menu join order_products on order_products.menu_id = menu.id")
     result = cur.fetchone()
     print(result)
@@ -433,6 +479,8 @@ async def totalsum():
 
 @app.get("/allproducts/averagesum")
 async def averagesum():
+    cur = con.cursor()
+
     cur.execute("SELECT AVG(cost) FROM menu join order_products on order_products.menu_id = menu.id")
     result = cur.fetchone()
     print(result)
@@ -440,6 +488,8 @@ async def averagesum():
 
 @app.get("/allproducts/totalevery")
 async def totalbyeveryproduct():
+    cur = con.cursor()
+
     cur.execute("SELECT * from menu")
     result = cur.fetchall()
 
@@ -463,6 +513,8 @@ async def totalbyeveryproduct():
 
 @app.get("/allproducts/chathistory")
 async def getChatHistory():
+    cur = con.cursor()
+
     cur.execute("select user_messages, assistant_messages from order_messages")
     result = cur.fetchall()
     print(result)
@@ -470,6 +522,7 @@ async def getChatHistory():
 
 @app.get("/allproducts/chathistory/{id}")
 async def getChatHistory(id : int):
+    cur = con.cursor()
     selectScript = "select user_messages, assistant_messages from order_messages where order_id = %s"
     selectValue = (id,)
     print("ID" + id.__str__())
@@ -480,6 +533,8 @@ async def getChatHistory(id : int):
 
 @app.post("/addChatHistory/")
 def addChatHistory():
+    cur = con.cursor()
+
     cur.execute("SELECT max(id) FROM orders")
     id = cur.fetchone()
     insert_order_messages_script = "Insert into order_messages(order_id, user_messages, assistant_messages) VALUES (%s, %s,%s)"
@@ -491,6 +546,8 @@ def addChatHistory():
 
 @app.post("/addNewProduct/")
 def addNewProduct(newProduct):
+    cur = con.cursor()
+
     insertScript = "Insert into menu(named, types, cost) VALUES (%s, %s,%s)"
     print("newProduct[2]")
     print(newProduct[2])
@@ -499,10 +556,36 @@ def addNewProduct(newProduct):
     insertValue = (newProduct[0],newProduct[1],int(newProduct[2]),)
     cur.execute(insertScript,insertValue)
     con.commit()
+@app.put("/addNewProduct/")
+def updateNewProduct(newProduct):
+    cur = con.cursor()
 
+    updateScript = "UPDATE menu SET cost = %s WHERE named = %s and types = %s;"
+    print(newProduct[0])
+    print(newProduct[1])
+    print(newProduct[2])
+    updateValue = (int(newProduct[2]),newProduct[0],newProduct[1],)
+    cur.execute(updateScript,updateValue)
+    con.commit()
 
-def checkIfCurrentProductExist(message):
+def checkIfCurrentProductExistByName(message):
+    cur = con.cursor()
+
     selectScript = "select named from menu where named = %s"
+    selectValue = (message,)
+    cur.execute(selectScript,selectValue)
+    result = cur.fetchall()
+    print(result)
+    if result.__len__() == 0:
+        print("FALSE")
+        return False
+    else:
+        print("TRUE")
+        return True
+def checkIfCurrentProductExistByType(message):
+    cur = con.cursor()
+
+    selectScript = "select types from menu where types = %s"
     selectValue = (message,)
     cur.execute(selectScript,selectValue)
     result = cur.fetchall()
@@ -515,6 +598,8 @@ def checkIfCurrentProductExist(message):
         return True
 
 def createRandomProduct():
+    cur = con.cursor()
+
     selectScript = "select named from menu"
     cur.execute(selectScript)
     result = cur.fetchall()

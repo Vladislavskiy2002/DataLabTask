@@ -1,11 +1,4 @@
-import threading
-from typing import List
-
-import schedule
 import streamlit as st
-import random
-import time
-
 import requests
 
 st.title("HISTORY")

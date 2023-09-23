@@ -36,13 +36,13 @@ import psycopg2
 import pandas as pd
 import requests
 
-# Create a connection to the PostgreSQL database
-conn = psycopg2.connect(
-    dbname='postgres',
-    user='postgres',
-    password='1234',
-    host='localhost'
-)
+# # Create a connection to the PostgreSQL database
+# conn = psycopg2.connect(
+#     dbname='postgres',
+#     user='postgres',
+#     password='1234',
+#     host='localhost'
+# )
 
 # Create a Streamlit app
 st.title('Admin view')
@@ -76,7 +76,7 @@ def display_all_orders():
         st.write("No orders found")
 
 display_all_orders()
-conn.close()
+# conn.close()
 
 # df = pd.DataFrame(orders, columns=["id", "created_date", "updated_date", "address"])
 #
