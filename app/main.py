@@ -35,115 +35,99 @@ class OrderiDTO(BaseModel):
     order_products: List[Menu]
     total:str
 
-# sql_schript1 = """
-# CREATE TABLE IF NOT EXISTS public.menu
-# (
-#     id integer NOT NULL DEFAULT nextval('menu_id_seq'::regclass),
-#     named character varying(255) COLLATE pg_catalog."default",
-#     types character varying(255) COLLATE pg_catalog."default",
-#     cost integer NOT NULL,
-#     CONSTRAINT menu_pkey PRIMARY KEY (id),
-#     CONSTRAINT menu_id_unique UNIQUE (id)
-# );
-# """
-#
-# sql_schript2 = """
-# CREATE TABLE IF NOT EXISTS public.orders
-# (
-#     id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
-#     created_date date NOT NULL,
-#     updated_date date NOT NULL,
-#     address character varying(255) COLLATE pg_catalog."default",
-#     CONSTRAINT orders_pkey PRIMARY KEY (id)
-# );
-# """
-#
-# sql_schript3 = """
-# CREATE TABLE IF NOT EXISTS order_products (
-#     id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
-#     order_id integer,
-#     menu_id integer,
-#     CONSTRAINT order_products_pkey PRIMARY KEY (id),
-#     CONSTRAINT order_products_menu_id_fkey FOREIGN KEY (menu_id)
-#         REFERENCES public.menu (id) MATCH SIMPLE
-#         ON UPDATE NO ACTION
-#         ON DELETE NO ACTION,
-#     CONSTRAINT order_products_order_id_fkey FOREIGN KEY (order_id)
-#         REFERENCES public.orders (id) MATCH SIMPLE
-#         ON UPDATE NO ACTION
-#         ON DELETE NO ACTION
-# );
-# """
-#
-# sql_schript4 = """
-# CREATE TABLE IF NOT EXISTS public.order_messages
-# (
-#     id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
-#     order_id integer,
-#     assistant_messages character varying(1000) COLLATE pg_catalog."default",
-#     user_messages character varying(1000) COLLATE pg_catalog."default",
-#     CONSTRAINT order_messages_order_id_fkey FOREIGN KEY (order_id)
-#         REFERENCES public.orders (id) MATCH SIMPLE
-#         ON UPDATE NO ACTION
-#         ON DELETE NO ACTION
-# )
-#
-# """
-# sql_schript5 = """
-# INSERT INTO orders(
-# 	id, created_date, updated_date, address)
-# 	VALUES (251, '2023-09-05', '2023-09-05', 'Князя Романа 23');
-# """
-# sql_schript6 = """
-# INSERT INTO order_menu(id, order_id, menu_id)
-# 	VALUES (2,2, 1);
-# """
-# sql_schript7 = """
-# INSERT INTO order_menu(
-# 	id, order_id, menu_id)
-# 	VALUES (2, 1);
-# );"""
+sql_schript1 = """
+CREATE TABLE IF NOT EXISTS public.menu
+(
+    id integer NOT NULL DEFAULT nextval('menu_id_seq'::regclass),
+    named character varying(255) COLLATE pg_catalog."default",
+    types character varying(255) COLLATE pg_catalog."default",
+    cost integer NOT NULL,
+    CONSTRAINT menu_pkey PRIMARY KEY (id),
+    CONSTRAINT menu_id_unique UNIQUE (id)
+);
+"""
 
-# @app.on_event("startup")
-# async def create_database():
-#     await asyncio.sleep(10)
-#
-#     global con
-#
-#     con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
-#     # con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
-#
-#     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
-#
-#     cur = con.cursor()
-#
-#     try:
-#         cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
-#         cur.execute(sql.SQL(sql_schript1))
-#         cur.execute(sql.SQL(sql_schript2))
-#         cur.execute(sql.SQL(sql_schript3))
-#         cur.execute(sql.SQL(sql_schript4))
-#         # cur.execute(sql.SQL(sql_schript5))
-#         # cur.execute(sql.SQL(sql_schript6))
-#         # cur.execute(sql.SQL(sql_schript7))
-#     #
-#     except:
-#         cur.execute(sql.SQL("DROP DATABASE datalab_db;"))
-#         cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
-#         cur.execute(sql.SQL(sql_schript1))
-#         cur.execute(sql.SQL(sql_schript2))
-#         cur.execute(sql.SQL(sql_schript3))
-#         cur.execute(sql.SQL(sql_schript4))
-#         # cur.execute(sql.SQL(sql_schript5))
-#         # cur.execute(sql.SQL(sql_schript6))
-#         # cur.execute(sql.SQL(sql_schript7))
-#
-#     db_con = psycopg2.connect(dbname="test", user="postgres", host="db", password="1234")
-#     # db_con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
-#
-#     cur = db_con.cursor()
-#     db_con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-#     cur.execute(sql.SQL("CREATE TABLE IF NOT EXISTS test_table (id int);"))
+sql_schript2 = """
+CREATE TABLE IF NOT EXISTS public.orders
+(
+    id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
+    created_date date NOT NULL,
+    updated_date date NOT NULL,
+    address character varying(255) COLLATE pg_catalog."default",
+    CONSTRAINT orders_pkey PRIMARY KEY (id)
+);
+"""
+
+sql_schript3 = """
+CREATE TABLE IF NOT EXISTS order_products (
+    id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
+    order_id integer,
+    menu_id integer,
+    CONSTRAINT order_products_pkey PRIMARY KEY (id),
+    CONSTRAINT order_products_menu_id_fkey FOREIGN KEY (menu_id)
+        REFERENCES public.menu (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT order_products_order_id_fkey FOREIGN KEY (order_id)
+        REFERENCES public.orders (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+);
+"""
+
+sql_schript4 = """
+CREATE TABLE IF NOT EXISTS public.order_messages
+(
+    id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
+    order_id integer,
+    assistant_messages character varying(1000) COLLATE pg_catalog."default",
+    user_messages character varying(1000) COLLATE pg_catalog."default",
+    CONSTRAINT order_messages_order_id_fkey FOREIGN KEY (order_id)
+        REFERENCES public.orders (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)"""
+
+@app.on_event("startup")
+async def create_database():
+    await asyncio.sleep(10)
+
+    global con
+
+    con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
+    # con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
+
+    con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
+
+    cur = con.cursor()
+
+    try:
+        cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
+        cur.execute(sql.SQL(sql_schript1))
+        cur.execute(sql.SQL(sql_schript2))
+        cur.execute(sql.SQL(sql_schript3))
+        cur.execute(sql.SQL(sql_schript4))
+        # cur.execute(sql.SQL(sql_schript5))
+        # cur.execute(sql.SQL(sql_schript6))
+        # cur.execute(sql.SQL(sql_schript7))
+    #
+    except:
+        cur.execute(sql.SQL("DROP DATABASE datalab_db;"))
+        cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
+        cur.execute(sql.SQL(sql_schript1))
+        cur.execute(sql.SQL(sql_schript2))
+        cur.execute(sql.SQL(sql_schript3))
+        cur.execute(sql.SQL(sql_schript4))
+        # cur.execute(sql.SQL(sql_schript5))
+        # cur.execute(sql.SQL(sql_schript6))
+        # cur.execute(sql.SQL(sql_schript7))
+
+    db_con = psycopg2.connect(dbname="test", user="postgres", host="db", password="1234")
+    # db_con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
+
+    cur = db_con.cursor()
+    db_con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cur.execute(sql.SQL("CREATE TABLE IF NOT EXISTS test_table (id int);"))
 
 products = []
 newProductType = ""

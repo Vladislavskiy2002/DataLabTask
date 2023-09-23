@@ -16,6 +16,16 @@ services:
         - PYTHONUNBUFFERED=0
       container_name: "core-api-container"
       ports:
-            - 80:80
+            - "8080:8080"
       volumes:
-        - ./app/:/app
+        - ./app/:/main
+  streamlit:
+    build: .
+    environment:
+      - PYTHONUNBUFFERED=0
+    container_name: "core-web-container"
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./app/:/app
+      - ./app/:/pages:/.
