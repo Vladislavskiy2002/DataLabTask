@@ -21,7 +21,7 @@ for message in st.session_state.messages:
 
 if st.session_state.messages == []:
     with st.chat_message("assistant"):
-        requests.get("http://127.0.0.1:8000/setToDefault").json()
+        requests.get("http://0.0.0.0:8080/setToDefault").json()
         st.write("Welcome, what can I get you")
         st.session_state.messages.append({"role": "assistant", "content": "Welcome, what can I get you"})
 flag = False
