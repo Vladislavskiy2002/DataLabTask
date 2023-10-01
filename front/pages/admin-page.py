@@ -49,16 +49,16 @@ st.title('Admin view')
 
 # Function to fetch and display all orders as a table
 def display_all_orders():
-    orders = requests.get("http://127.0.0.1:8000/orders").json()
+    orders = requests.get("http://fastapi:8080/orders").json()
     # orders = cursor.fetchall()
     if orders:
         # Convert the result to a DataFrame
         df = pd.DataFrame(orders, columns=["id", "created_date", "updated_date", "address"])
         # Calculate the total sum of all orders
         total_orders = len(df)
-        total_orders_sum = requests.get("http://127.0.0.1:8000/allproducts/totalsum").json()
+        total_orders_sum = requests.get("http://fastapi:8080/allproducts/totalsum").json()
         st.write(f"Total Orders sum : {total_orders_sum[0]}")
-        average_orders_sum = requests.get("http://127.0.0.1:8000/allproducts/averagesum").json()
+        average_orders_sum = requests.get("http://fastapi:8080//allproducts/averagesum").json()
         st.write(f"Average Orders sum : {average_orders_sum[0]}")
         # Display the total sum above the table
         st.write(f"Total Orders: {total_orders}")
@@ -67,7 +67,7 @@ def display_all_orders():
 
         st.dataframe(df)
 
-        totalbyeveryproduct = requests.get("http://127.0.0.1:8000/allproducts/totalevery").json()
+        totalbyeveryproduct = requests.get("http://fastapi:8080/allproducts/totalevery").json()
         df = pd.DataFrame(totalbyeveryproduct, columns=["name", "total sale"])
         df.index = df.index + 1
 

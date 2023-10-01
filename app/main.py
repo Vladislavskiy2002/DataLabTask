@@ -611,7 +611,9 @@ from starlette.responses import JSONResponse
 app = FastAPI()
 
 # con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
-# con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
+con = psycopg2.connect(dbname="postgres", user="postgres", host="35.232.28.93", password="1234")
+# con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
+con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
 # cur = con.cursor()
 
 class Menu(BaseModel):
@@ -688,36 +690,36 @@ CREATE TABLE IF NOT EXISTS public.order_messages
         ON DELETE NO ACTION
 )"""
 
-@app.on_event("startup")
-async def create_database():
-    await asyncio.sleep(10)
-
-    global con
-
-    con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
-    # con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
-
-    con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
-
-    cur = con.cursor()
-
-    try:
-        cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
-        cur.execute(sql.SQL(sql_schript1))
-        cur.execute(sql.SQL(sql_schript2))
-        cur.execute(sql.SQL(sql_schript3))
-        cur.execute(sql.SQL(sql_schript4))
-        # cur.execute(sql.SQL(sql_schript5))
-        # cur.execute(sql.SQL(sql_schript6))
-        # cur.execute(sql.SQL(sql_schript7))
-    #
-    except:
-        cur.execute(sql.SQL("DROP DATABASE datalab_db;"))
-        cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
-        cur.execute(sql.SQL(sql_schript1))
-        cur.execute(sql.SQL(sql_schript2))
-        cur.execute(sql.SQL(sql_schript3))
-        cur.execute(sql.SQL(sql_schript4))
+# @app.on_event("startup")
+# async def create_database():
+#     await asyncio.sleep(10)
+#
+#     global con
+#
+#     con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
+#     # con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
+#
+#     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
+#
+#     cur = con.cursor()
+#
+#     try:
+#         cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
+#         cur.execute(sql.SQL(sql_schript1))
+#         cur.execute(sql.SQL(sql_schript2))
+#         cur.execute(sql.SQL(sql_schript3))
+#         cur.execute(sql.SQL(sql_schript4))
+#         # cur.execute(sql.SQL(sql_schript5))
+#         # cur.execute(sql.SQL(sql_schript6))
+#         # cur.execute(sql.SQL(sql_schript7))
+#     #
+#     except:
+#         cur.execute(sql.SQL("DROP DATABASE datalab_db;"))
+#         cur.execute(sql.SQL("CREATE DATABASE datalab_db;"))
+#         cur.execute(sql.SQL(sql_schript1))
+#         cur.execute(sql.SQL(sql_schript2))
+#         cur.execute(sql.SQL(sql_schript3))
+#         cur.execute(sql.SQL(sql_schript4))
         # cur.execute(sql.SQL(sql_schript5))
         # cur.execute(sql.SQL(sql_schript6))
         # cur.execute(sql.SQL(sql_schript7))
@@ -899,7 +901,7 @@ async def handler(message: str):
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
-def totalcost():
+async def totalcost():
     cur = con.cursor()
 
     global products
@@ -914,7 +916,7 @@ def totalcost():
     print("Totali" + total.__str__())
     return total.__str__()
 @app.get("/product/remove/{name}")
-def removeProduct(name: str):
+async def removeProduct(name: str):
     global products
     select_value = (name,)
     select_script = "SELECT * FROM menu where named = %s"
@@ -923,7 +925,7 @@ def removeProduct(name: str):
     # return JSONResponse(status_code=status.HTTP_200_OK)
     return True
 @app.get("/product/all")
-def allproducts():
+async def allproducts():
     global products
     print(products)
     json_compatible_item_data = jsonable_encoder(products)
@@ -940,7 +942,7 @@ async def root():
     return JSONResponse(content=json_compatible_item_data)
 #
 @app.get("/menus")
-def menus():
+async def menus():
     global products
     cur = con.cursor()
     cur.execute("SELECT * FROM menu")
@@ -951,7 +953,7 @@ def menus():
     json_compatible_item_data = jsonable_encoder(result)
     return JSONResponse(content=json_compatible_item_data)
 @app.get("/menus/{message}")
-def menusByName(message:str):
+async def menusByName(message:str):
     cur = con.cursor()
 
     global products
@@ -1152,6 +1154,7 @@ async def updateNewProduct(newProduct):
     cur.execute(updateScript,updateValue)
     con.commit()
 
+@app.get("/check/{message}")
 async def checkIfCurrentProductExistByName(message):
     cur = con.cursor()
 
@@ -1181,7 +1184,7 @@ async def checkIfCurrentProductExistByType(message):
         print("TRUE")
         return True
 
-def createRandomProduct():
+async def createRandomProduct():
     cur = con.cursor()
 
     selectScript = "select named from menu"

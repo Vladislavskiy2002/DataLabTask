@@ -1,0 +1,11 @@
+streamlit
+pandas == 1.2.4
+fastapi>=0.68.0,<0.69.0
+pydantic>=1.8.0,<2.0.0
+uvicorn>=0.15.0,<0.16.0
+psycopg2~=2.9.7
+starlette~=0.14.2
+asyncio~=3.4.3
+typing~=3.7.4.3
+openai~=0.28.0
+requests~=2.31.0

@@ -17,11 +17,11 @@ if "history-messages" not in st.session_state:
 
 flag = False
     # Display user message in chat message container
-data = requests.get("http://127.0.0.1:8000/allproducts/chathistory").json()
+data = requests.get("http://fastapi:8080/allproducts/chathistory").json()
 with st.chat_message("assistant"):
     st.write("ENTER ORDER ID")
 if prompt := st.chat_input("ORDER ID"):
-    data = requests.get("http://127.0.0.1:8000/allproducts/chathistory/" + prompt).json()
+    data = requests.get("http://fastapi:8080/allproducts/chathistory/" + prompt).json()
     for item in data:
         with st.chat_message("user"):
             st.write(item[0])

@@ -21,7 +21,7 @@ for message in st.session_state.adminMessages:
 
 if st.session_state.adminMessages == []:
     with st.chat_message("assistant"):
-        requests.get("http://127.0.0.1:8000/admin/setToDefault").json()
+        requests.get("http://fastapi:8080/admin/setToDefault").json()
         st.write("Welcome, Choose update or add")
         st.session_state.adminMessages.append({"role": "assistant", "content": "Welcome, chosee add or update:"})
 
@@ -36,7 +36,7 @@ if prompt := st.chat_input("What is up?"):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
-        data = requests.get("http://127.0.0.1:8000/admin/handler/" + prompt.__str__()).json()
+        data = requests.get("http://fastapi:8080/admin/handler/" + prompt.__str__()).json()
         st.write(data)
         st.session_state.adminMessages.append({"role": "assistant", "content": data})
 
