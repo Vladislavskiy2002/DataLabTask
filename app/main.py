@@ -597,6 +597,7 @@
 #     return result[0]
 # #
 import asyncio
+import logging
 import random
 from datetime import date
 from typing import List
@@ -611,7 +612,7 @@ from starlette.responses import JSONResponse
 app = FastAPI()
 
 # con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
-con = psycopg2.connect(dbname="postgres", user="postgres", host="35.232.28.93", password="1234")
+con = psycopg2.connect(dbname="postgres", user="postgres", host="34.67.51.18", password="1234")
 # con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
 con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
 # cur = con.cursor()
@@ -803,7 +804,8 @@ async def handler(message: str):
         lastAdminAssistantResponce = "Enter the name of product"
         return lastAdminAssistantResponce
     elif lastAdminAssistantResponce is "Enter the name of product":
-        if checkIfCurrentProductExistByName(message) and status != "update":
+        if checkIfCurrentProductExistByName(message) and status == "add":
+            logging.info(checkIfCurrentProductExistByName(message))
             return "Product with current name has already exist. Try again to write the product's name:"
         newProductName = message
         lastAdminAssistantResponce = "Enter the costs:"
@@ -901,7 +903,7 @@ async def handler(message: str):
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
-async def totalcost():
+def totalcost():
     cur = con.cursor()
 
     global products
@@ -916,7 +918,7 @@ async def totalcost():
     print("Totali" + total.__str__())
     return total.__str__()
 @app.get("/product/remove/{name}")
-async def removeProduct(name: str):
+def removeProduct(name: str):
     global products
     select_value = (name,)
     select_script = "SELECT * FROM menu where named = %s"
@@ -925,7 +927,7 @@ async def removeProduct(name: str):
     # return JSONResponse(status_code=status.HTTP_200_OK)
     return True
 @app.get("/product/all")
-async def allproducts():
+def allproducts():
     global products
     print(products)
     json_compatible_item_data = jsonable_encoder(products)
@@ -953,7 +955,7 @@ async def menus():
     json_compatible_item_data = jsonable_encoder(result)
     return JSONResponse(content=json_compatible_item_data)
 @app.get("/menus/{message}")
-async def menusByName(message:str):
+def menusByName(message:str):
     cur = con.cursor()
 
     global products
@@ -970,7 +972,7 @@ async def menusByName(message:str):
     print(products)
     return JSONResponse(content=json_compatible_item_data)
 @app.post("/orders")
-async def add_orderdto(orders: OrderiDTO):
+def add_orderdto(orders: OrderiDTO):
     cur = con.cursor()
 
     # insert_menu_script = "Insert into menu(id,named,types,cost) VALUES (%s,%s,%s,%s)"
@@ -1118,7 +1120,7 @@ async def getChatHistory(id : int):
     return result
 
 @app.post("/addChatHistory/")
-async def addChatHistory():
+def addChatHistory():
     cur = con.cursor()
 
     cur.execute("SELECT max(id) FROM orders")
@@ -1131,7 +1133,7 @@ async def addChatHistory():
         cur.execute(insert_order_messages_script, insert_orders_value)
 
 @app.post("/addNewProduct/")
-async def addNewProduct(newProduct):
+def addNewProduct(newProduct):
     cur = con.cursor()
 
     insertScript = "Insert into menu(named, types, cost) VALUES (%s, %s,%s)"
@@ -1143,7 +1145,7 @@ async def addNewProduct(newProduct):
     cur.execute(insertScript,insertValue)
     con.commit()
 @app.put("/addNewProduct/")
-async def updateNewProduct(newProduct):
+def updateNewProduct(newProduct):
     cur = con.cursor()
 
     updateScript = "UPDATE menu SET cost = %s WHERE named = %s and types = %s;"
@@ -1155,7 +1157,7 @@ async def updateNewProduct(newProduct):
     con.commit()
 
 @app.get("/check/{message}")
-async def checkIfCurrentProductExistByName(message):
+def checkIfCurrentProductExistByName(message):
     cur = con.cursor()
 
     selectScript = "select named from menu where named = %s"
@@ -1169,7 +1171,7 @@ async def checkIfCurrentProductExistByName(message):
     else:
         print("TRUE")
         return True
-async def checkIfCurrentProductExistByType(message):
+def checkIfCurrentProductExistByType(message):
     cur = con.cursor()
 
     selectScript = "select types from menu where types = %s"
@@ -1184,7 +1186,7 @@ async def checkIfCurrentProductExistByType(message):
         print("TRUE")
         return True
 
-async def createRandomProduct():
+def createRandomProduct():
     cur = con.cursor()
 
     selectScript = "select named from menu"

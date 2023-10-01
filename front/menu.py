@@ -21,7 +21,7 @@ for message in st.session_state.messages:
 
 if st.session_state.messages == []:
     with st.chat_message("assistant"):
-        requests.get("http://fastapi:8080/setToDefault").json()
+        requests.get("https://fastapi-project-k2w6seoxja-uc.a.run.app/setToDefault").json()
         st.write("Welcome, what can I get you")
         st.session_state.messages.append({"role": "assistant", "content": "Welcome, what can I get you"})
 flag = False
@@ -37,6 +37,6 @@ if prompt := st.chat_input("What is up?"):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
-        data = requests.get("http://fastapi:8080/handler/" + prompt.__str__()).json()
+        data = requests.get("https://fastapi-project-k2w6seoxja-uc.a.run.app/handler/" + prompt.__str__()).json()
         st.write(data)
         st.session_state.messages.append({"role": "assistant", "content": data})

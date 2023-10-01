@@ -1,4 +1,7 @@
 CREATE DATABASE datalab_db;
+CREATE SEQUENCE IF NOT EXISTS menu_id_seq;
+CREATE SEQUENCE IF NOT EXISTS order_products_id_seq;
+
 CREATE TABLE IF NOT EXISTS public.menu
 (
     id integer NOT NULL DEFAULT nextval('menu_id_seq'::regclass),
