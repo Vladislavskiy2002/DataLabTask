@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.orders
     id integer NOT NULL DEFAULT nextval('order_products_id_seq'::regclass),
     created_date date NOT NULL,
     updated_date date NOT NULL,
-    address character varying(255) COLLATE pg_catalog."default",
+--     address character varying(255) COLLATE pg_catalog."default",
     CONSTRAINT orders_pkey PRIMARY KEY (id)
 );
 CREATE TABLE IF NOT EXISTS order_products (

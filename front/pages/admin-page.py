@@ -1,51 +1,10 @@
-# import streamlit as st
-# import time
-# import numpy as np
-#
-# st.set_page_config(page_title="Plotting Demo", page_icon="📈")
-#
-# st.markdown("# Plotting Demo")
-# st.sidebar.header("Plotting Demo")
-# st.write(
-#     """This demo illustrates a combination of plotting and animation with
-# Streamlit. We're generating a bunch of random numbers in a loop for around
-# 5 seconds. Enjoy!"""
-# )
-#
-# progress_bar = st.sidebar.progress(0)
-# status_text = st.sidebar.empty()
-# last_rows = np.random.randn(1, 1)
-# chart = st.line_chart(last_rows)
-#
-# for i in range(1, 101):
-#     new_rows = last_rows[-1, :] + np.random.randn(5, 1).cumsum(axis=0)
-#     status_text.text("%i%% Complete" % i)
-#     chart.add_rows(new_rows)
-#     progress_bar.progress(i)
-#     last_rows = new_rows
-#     time.sleep(0.05)
-#
-# progress_bar.empty()
-#
-# # Streamlit widgets automatically run the script from top to bottom. Since
-# # this button is not connected to any other logic, it just causes a plain
-# # rerun.
-# st.button("Re-run")
 import streamlit as st
 import psycopg2
 import pandas as pd
 import requests
 
-# # Create a connection to the PostgreSQL database
-# conn = psycopg2.connect(
-#     dbname='postgres',
-#     user='postgres',
-#     password='1234',
-#     host='localhost'
-# )
-
 # Create a Streamlit app
-st.title('Admin view')
+st.title('Admin vieW')
 
 # Function to fetch and display all orders as a table
 def display_all_orders():
@@ -53,7 +12,7 @@ def display_all_orders():
     # orders = cursor.fetchall()
     if orders:
         # Convert the result to a DataFrame
-        df = pd.DataFrame(orders, columns=["id", "created_date", "updated_date", "address"])
+        df = pd.DataFrame(orders, columns=["id", "created_date", "updated_date"])
         # Calculate the total sum of all orders
         total_orders = len(df)
         total_orders_sum = requests.get("https://fastapi-project-k2w6seoxja-uc.a.run.app/allproducts/totalsum").json()
@@ -68,15 +27,14 @@ def display_all_orders():
         st.dataframe(df)
 
         totalbyeveryproduct = requests.get("https://fastapi-project-k2w6seoxja-uc.a.run.app/allproducts/totalevery").json()
-        df = pd.DataFrame(totalbyeveryproduct, columns=["name", "total sale"])
-        df.index = df.index + 1
+        # Створюємо DataFrame зі збережених даних
+        df_products = pd.DataFrame(totalbyeveryproduct, columns=["name","total sale","price"])
+        # df_products = pd.DataFrame(data, columns=["name", "price", "total sale"])
+        # df = pd.DataFrame(totalbyeveryproduct,pricebyeveryproduct,columns=["name", "total sale", "price"])
+        df_products.index = df_products.index + 1
 
-        st.dataframe(df)
+        st.dataframe(df_products)
     else:
         st.write("No orders found")
 
 display_all_orders()
-# conn.close()
-
-# df = pd.DataFrame(orders, columns=["id", "created_date", "updated_date", "address"])
-#
