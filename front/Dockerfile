@@ -10,6 +10,7 @@ WORKDIR /front
 COPY . /front/
 RUN pip install streamlit
 RUN pip install psycopg2
+RUN pip install plotly
 #
 ## Відкрийте порт 8081 для Streamlit
 #EXPOSE 8501

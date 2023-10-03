@@ -185,7 +185,7 @@ async def handler(message: str):
     global newProductCost
     global status
 
-    if startAdmin and message == "add" or message == "update":
+    if startAdmin and message == "add" or message == "update" or message == "stock":
         status = message
         startAdmin = False
         lastAdminAssistantResponce = "Enter the type of product"
@@ -199,9 +199,30 @@ async def handler(message: str):
         if checkIfCurrentProductExistByName(message) and status == "add":
             logging.info(checkIfCurrentProductExistByName(message))
             return "Product with current name has already exist. Try again to write the product's name:"
+        if checkIfCurrentProductExistByName(message) and checkIfCurrentProductExistByType(newProductType) and status == "stock":
+            logging.info(checkIfCurrentProductExistByName(message))
+            newProductName = message
+            lastAdminAssistantResponce = "Set the stock:"
+            return "Set the stock:"
+        elif not checkIfCurrentProductExistByName(message) and not checkIfCurrentProductExistByType(newProductType) and status == "stock":
+            lastAdminAssistantResponce = ""
+            startAdmin = True
+            return "The product with name: " + message + " and type: " + newProductType + " isn't exist. Choose update, add or stock"
+
         newProductName = message
         lastAdminAssistantResponce = "Enter the costs:"
         return lastAdminAssistantResponce
+    elif lastAdminAssistantResponce == "Set the stock:":
+        if not message.isdecimal():
+            return "the stock must be num. Try again"
+        elif len(message) > 100:
+            return "the stock must be less that 100"
+        newProductStock = message
+        newProduct = (newProductName, newProductType, newProductStock,)
+        updateNewProductByStock(newProduct)
+        startAdmin = True
+        lastAdminAssistantResponce = ""
+        return "The stock has been successfully set"
     elif lastAdminAssistantResponce == "Enter the costs:":
         newProductCost = message
         if not message.isdecimal():
@@ -211,14 +232,14 @@ async def handler(message: str):
         if status == "add":
             addNewProduct(newProduct)
             startAdmin = True
-            return "The product has been successfully added. Choose update or add"
+            return "The product has been successfully added. Choose update, add or stock"
         elif status == "update":
             startAdmin = True
             if checkIfCurrentProductExistByName(newProductName) == True and checkIfCurrentProductExistByType(newProductType) == True:
                 updateNewProduct(newProduct)
-                return "The product has been successfully updated. Choose update or add"
+                return "The product has been successfully updated. Choose update, add or stock"
             else:
-                return "The product with name: " + newProductName + " and type: " + newProductType + " isn't exist. Choose update or add"
+                return "The product with name: " + newProductName + " and type: " + newProductType + " isn't exist. Choose update, add or stock"
 
     else:
         return "Something goes wrong ;("
@@ -237,9 +258,11 @@ async def handler(message: str):
     if flag:
         if message == "yes":
             flag = False
-            products.append(str(newRandomProduct))
-            chatHistory.append((message, "The " + str(newRandomProduct) + " has been successfully added to your order"))
-            return "The " + str(newRandomProduct) + " has been successfully added to your order"
+
+            products.append(newRandomProduct[0])
+            reduceStockByProductNameAndType([newRandomProduct[0], newRandomProduct[1]])
+            chatHistory.append((message, "The " + str(newRandomProduct[0]) + " has been successfully added to your order"))
+            return "The " + str(newRandomProduct[0]) + " has been successfully added to your order"
         elif message == "no":
             flag = False
             chatHistory.append((message,"Would you like something else?"))
@@ -254,10 +277,18 @@ async def handler(message: str):
         if data == prompt.__str__() + " isn't exist in our menu":
             chatHistory.append((message,prompt.__str__() + " isn't exist in our menu"))
             return prompt.__str__() + " isn't exist in our menu"
+        if data == "I’m sorry but we’re out of " + str(prompt):
+            chatHistory.append((message,"I’m sorry but we’re out of " + str(prompt)))
+            return "I’m sorry but we’re out of " + str(prompt)
+        reduceStockByProductNameAndType([data[0][1],data[0][2]])
         flag = True
         newRandomProduct = createRandomProduct()
-        chatHistory.append((message,"Would you like to add a " + str(newRandomProduct) + " to your " + prompt.__str__() + "?"))
-        return "Would you like to add a " + str(newRandomProduct) + " to your " + prompt.__str__() + "?"
+        if newRandomProduct == "not found":
+            flag = False
+            chatHistory.append("Would you like something else?")
+            return "Would you like something else?"
+        chatHistory.append((message,"Would you like to add a " + str(newRandomProduct[0]) + " for $" + str(newRandomProduct[2])+ "?"))
+        return "Would you like to add a " + str(newRandomProduct[0]) + " for $" + str(newRandomProduct[2]) + "?"
     elif message.startswith("I don't want a "):
         prompt = message.replace("I don't want a ", '', 1)
         if(products.__len__() ==0):
@@ -272,7 +303,7 @@ async def handler(message: str):
         return getAllProducts()
     elif message.startswith("That's all"):
         total = getTotalCost()
-        chatHistory.append((message, "Total cost $" + total))
+        chatHistory.append((message, "Your total is $" + total))
         addOrder(OrderiDTO)
         addChatHistory()
         return "Your total is $" + str(total)
@@ -298,7 +329,8 @@ def getTotalCost():
         select_script = "SELECT cost FROM menu where named = %s"
         cur.execute(select_script, select_value)
         data = cur.fetchone()
-        total += data[0]
+        print(data)
+        total += int(data[0])
     return total.__str__()
 @app.get("/product/remove/{name}")
 def removeProduct(name: str):
@@ -311,13 +343,19 @@ def removeProduct(name: str):
 @app.get("/product/all")
 def getAllProducts():
     global products
+    nameOfProducts = []
+    for product in products:
+        nameOfProducts.append(product)
     json_compatible_item_data = jsonable_encoder(products)
-    return products
+    return nameOfProducts
 @app.get("/orders")
 async def getOrders():
     cur = con.cursor()
     cur.execute("SELECT * FROM orders")
+    # print("before")
     result = cur.fetchall()
+    # print("after")
+
     if result is None:
         return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
     con.commit()
@@ -343,15 +381,20 @@ def getMenuByName(message:str):
 
     select_value = (message,)
     select_script = "SELECT * FROM menu where named = %s"
+    # select_script = "select named,cost,stock FROM menu where named = %s"
     cur.execute(select_script, select_value)
     result = cur.fetchall()
 
     if result is None or result.__len__() == 0:
         return message + " isn't exist in our menu"
+    if result[0][4] == None or int(result[0][4]) == 0:
+        return "I’m sorry but we’re out of " + message
 
     json_compatible_item_data = jsonable_encoder(result)
-    products.append(message)
-    return JSONResponse(content=json_compatible_item_data)
+    print("RESULT" + str(result[0][1]))
+    products.append(str(result[0][1]))
+    return result
+    # return JSONResponse(content=json_compatible_item_data)
 @app.post("/orders")
 def addOrder(orders: OrderiDTO):
     cur = con.cursor()
@@ -367,10 +410,10 @@ def addOrder(orders: OrderiDTO):
 
         result = cur.fetchone()
         # temp = Menu
-        idProducts.append(result[0])
+        idProducts.append((result[0],result[3]))
 
     products.clear()
-    insert_menu_orders_script = "Insert into order_products(order_id, menu_id) VALUES (%s,%s)"
+    insert_menu_orders_script = "Insert into order_products(order_id, menu_id,price) VALUES (%s,%s,%s)"
     insert_orders_value = (date.today().isoformat(),date.today().isoformat())
     cur.execute(insert_orders_script, insert_orders_value)
 
@@ -380,7 +423,7 @@ def addOrder(orders: OrderiDTO):
 
     con.commit()
     for id in idProducts:
-        insert_menu_orders_value = (int.__int__(orders_result[0]), id)
+        insert_menu_orders_value = (int.__int__(orders_result[0]), id[0],id[1])
         cur.execute(insert_menu_orders_script, insert_menu_orders_value)
         con.commit()
 
@@ -390,15 +433,15 @@ def addOrder(orders: OrderiDTO):
 async def getTotalSum():
     cur = con.cursor()
 
-    cur.execute("SELECT SUM(cost) FROM menu join order_products on order_products.menu_id = menu.id")
+    cur.execute("SELECT SUM(price) FROM order_products  join menu on order_products.menu_id = menu.id")
     result = cur.fetchone()
     return result
-
+#
 @app.get("/allproducts/averagesum")
 async def getAverageSum():
     cur = con.cursor()
 
-    cur.execute("SELECT AVG(cost) FROM menu join order_products on order_products.menu_id = menu.id")
+    cur.execute("SELECT AVG(price) FROM order_products join menu on order_products.menu_id = menu.id")
     result = cur.fetchone()
     return result
 
@@ -412,11 +455,11 @@ async def getTotalByEveryProduct():
     items = []
 
     for r in result:
-        select_script = ("SELECT SUM(cost) FROM menu JOIN order_products on order_products.menu_id = menu.id where menu.id = %s")
+        select_script = ("SELECT SUM(price) FROM order_products JOIN menu on order_products.menu_id = menu.id where menu.id = %s")
         select_value = (r[0],)
         cur.execute(select_script, select_value)
         sum = cur.fetchone()
-        twoitem = [r[1], sum[0], r[3]]
+        twoitem = [r[1], sum[0], r[3],r[4]]
         items.append(twoitem)
 
     return items
@@ -455,18 +498,26 @@ def addChatHistory():
     for message in chatHistory:
         insert_orders_value = (id[0], message[0], message[1],)
         cur.execute(insert_order_messages_script, insert_orders_value)
+    chatHistory.clear()
 
 @app.post("/addNewProduct/")
 def addNewProduct(newProduct):
     cur = con.cursor()
-    insertScript = "Insert into menu(named, types, cost) VALUES (%s, %s,%s)"
-    insertValue = (newProduct[0],newProduct[1],int(newProduct[2]),)
+    insertScript = "Insert into menu(named, types, cost,stock) VALUES (%s, %s,%s,%s)"
+    insertValue = (newProduct[0],newProduct[1],int(newProduct[2]),0,)
     cur.execute(insertScript,insertValue)
     con.commit()
 @app.put("/addNewProduct/")
 def updateNewProduct(newProduct):
     cur = con.cursor()
     updateScript = "UPDATE menu SET cost = %s WHERE named = %s and types = %s;"
+    updateValue = (int(newProduct[2]),newProduct[0],newProduct[1],)
+    cur.execute(updateScript,updateValue)
+    con.commit()
+@app.put("/addNewProduct/")
+def updateNewProductByStock(newProduct):
+    cur = con.cursor()
+    updateScript = "UPDATE menu SET stock = %s WHERE named = %s and types = %s;"
     updateValue = (int(newProduct[2]),newProduct[0],newProduct[1],)
     cur.execute(updateScript,updateValue)
     con.commit()
@@ -500,9 +551,26 @@ def checkIfCurrentProductExistByType(message):
 def createRandomProduct():
     cur = con.cursor()
 
-    selectScript = "select named from menu"
+    selectScript = "select named,types, cost from menu where stock > 0"
     cur.execute(selectScript)
     result = cur.fetchall()
+    if result is None or len(result) == 0:
+        return "not found"
     result = random.choice(result)
     print("RANDOM NAME: " + str(result))
-    return result[0]
+
+    return result
+
+def reduceStockByProductNameAndType(someProduct):
+    cur = con.cursor()
+    selectScript = "SELECT stock from menu WHERE named = %s and types = %s;"
+    updateValue = (someProduct[0],someProduct[1],)
+    cur.execute(selectScript,updateValue)
+    stock = cur.fetchone()
+
+    selectScript = "UPDATE menu SET stock = %s WHERE named = %s and types = %s;"
+
+    print(someProduct[0])
+    print(someProduct[1])
+    updateValue = (stock[0]-1,someProduct[0],someProduct[1])
+    cur.execute(selectScript,updateValue)
