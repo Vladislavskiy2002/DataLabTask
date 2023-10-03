@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import time
 
 st.title("COFFEE SHOt")
 
@@ -27,14 +26,10 @@ if st.session_state.messages == []:
         st.session_state.messages.append({"role": "assistant", "content": "Welcome, what can I get you"})
 flag = False
 #
-start_time = time.time()
 # Accept user input
 if prompt := st.chat_input("What is up?"):
     # Display user message in chat message container
     with st.chat_message("user"):
-        end_time = time.time()
-        execution_time = end_time - start_time
-        st.write(f'Час виконання: {execution_time:.2f} секунд')
         st.markdown(prompt)
         # schedule.clear()
         st.session_state.messages.append({"role": "user", "content": prompt})

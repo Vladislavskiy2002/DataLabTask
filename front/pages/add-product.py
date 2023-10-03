@@ -6,6 +6,7 @@ st.title("ADD PRODUCT ADMIN PANEL")
 st.sidebar.title("Program commands: ")
 st.sidebar.info("update")
 st.sidebar.info("add")
+st.sidebar.info("stock")
 
 # Initialize chat history
 if "adminMessages" not in st.session_state:

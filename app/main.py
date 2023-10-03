@@ -185,8 +185,8 @@ async def handler(message: str):
     global newProductCost
     global status
 
-    if startAdmin and message == "add" or message == "update" or message == "stock":
-        status = message
+    if startAdmin and message.lower() == "add" or message.lower() == "update" or message.lower() == "stock":
+        status = message.lower()
         startAdmin = False
         lastAdminAssistantResponce = "Enter the type of product"
         return lastAdminAssistantResponce
@@ -256,14 +256,14 @@ async def handler(message: str):
         chatHistory.append(("Welcome at the coffee shop \n What would you like?"))
         return "Welcome at the coffee shop \n What would you like? "
     if flag:
-        if message == "yes":
+        if message.lower() == "yes":
             flag = False
 
             products.append(newRandomProduct[0])
             reduceStockByProductNameAndType([newRandomProduct[0], newRandomProduct[1]])
             chatHistory.append((message, "The " + str(newRandomProduct[0]) + " has been successfully added to your order"))
             return "The " + str(newRandomProduct[0]) + " has been successfully added to your order"
-        elif message == "no":
+        elif message.lower() == "no":
             flag = False
             chatHistory.append((message,"Would you like something else?"))
             return "Would you like something else?"
@@ -271,8 +271,8 @@ async def handler(message: str):
             chatHistory.append((message, "I don't understand you. Try again"))
             return "I don't understand you. Try again"
 
-    if message.startswith("I'd like a "):
-        prompt = message.replace("I'd like a ", '', 1)
+    if message.lower().startswith("i'd like a "):
+        prompt = message.lower().replace("i'd like a ", '', 1)
         data = getMenuByName(prompt)
         if data == prompt.__str__() + " isn't exist in our menu":
             chatHistory.append((message,prompt.__str__() + " isn't exist in our menu"))
@@ -289,7 +289,7 @@ async def handler(message: str):
             return "Would you like something else?"
         chatHistory.append((message,"Would you like to add a " + str(newRandomProduct[0]) + " for $" + str(newRandomProduct[2])+ "?"))
         return "Would you like to add a " + str(newRandomProduct[0]) + " for $" + str(newRandomProduct[2]) + "?"
-    elif message.startswith("I don't want a "):
+    elif message.lower().startswith("i don't want a "):
         prompt = message.replace("I don't want a ", '', 1)
         if(products.__len__() ==0):
             chatHistory.append((message, "You can't do it because you haven't choose any product"))
@@ -297,11 +297,11 @@ async def handler(message: str):
         chatHistory.append((message, "The product with name: "+ prompt +" has been successful removed from your list"))
         removeProduct(prompt)
         return "The product with name: "+ str(prompt) +" has been successful removed from your list"
-    elif message.startswith("Show all"):
+    elif message.lower().startswith("show all"):
         result = getAllProducts()
         chatHistory.append((message,str(result)))
         return getAllProducts()
-    elif message.startswith("That's all"):
+    elif message.lower().startswith("that's all"):
         total = getTotalCost()
         chatHistory.append((message, "Your total is $" + total))
         addOrder(OrderiDTO)
