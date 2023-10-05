@@ -20,8 +20,8 @@ for message in st.session_state.adminMessages:
 if st.session_state.adminMessages == []:
     with st.chat_message("assistant"):
         requests.get("https://fastapi-project-k2w6seoxja-uc.a.run.app/admin/setToDefault").json()
-        st.write("Welcome, Choose update or add")
-        st.session_state.adminMessages.append({"role": "assistant", "content": "Welcome, chosee add or update:"})
+        st.write("Welcome, Choose update,add or stock")
+        st.session_state.adminMessages.append({"role": "assistant", "content": "Welcome, Choose update,add or stock"})
 
 # Accept user input
 if prompt := st.chat_input("What is up?"):

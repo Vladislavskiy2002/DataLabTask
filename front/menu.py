@@ -8,6 +8,7 @@ st.sidebar.info("I'd like a")
 st.sidebar.info("I don't want a")
 st.sidebar.info("Show all")
 st.sidebar.info("That's all")
+st.sidebar.info("What's")
 
 
 # Initialize chat history

@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 from datetime import date
 from typing import List
@@ -8,6 +9,9 @@ import psycopg2
 from fastapi import FastAPI
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
+import openai
+openai.organization = "org-2bXqWp423OEFqEdoPm8vbjAl"
+openai.api_key = os.getenv("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")
 
 app = FastAPI()
 
@@ -258,12 +262,15 @@ async def handler(message: str):
     if flag:
         if message.lower() == "yes":
             flag = False
-
+            product_id = getMenuByName(newRandomProduct[0])
+            addMenuStatistic((product_id[0][0],True))
             products.append(newRandomProduct[0])
             reduceStockByProductNameAndType([newRandomProduct[0], newRandomProduct[1]])
             chatHistory.append((message, "The " + str(newRandomProduct[0]) + " has been successfully added to your order"))
             return "The " + str(newRandomProduct[0]) + " has been successfully added to your order"
         elif message.lower() == "no":
+            product_id = getMenuByName(newRandomProduct[0])
+            addMenuStatistic((product_id[0][0], False))
             flag = False
             chatHistory.append((message,"Would you like something else?"))
             return "Would you like something else?"
@@ -309,7 +316,6 @@ async def handler(message: str):
         return "Your total is $" + str(total)
     elif message.startswith("What's"):
         response = openai.Completion.create(
-            chat = "gpt-3.5-turbo",
             engine="text-davinci-003",
             prompt= message,
             temperature=0.5,
@@ -351,11 +357,56 @@ def getAllProducts():
 @app.get("/orders")
 async def getOrders():
     cur = con.cursor()
-    cur.execute("SELECT * FROM orders")
+    cur.execute("SELECT orders.*, sum(order_products.price) AS avg_order_number FROM orders JOIN order_products ON orders.id = order_products.order_id GROUP BY orders.id;")
     # print("before")
     result = cur.fetchall()
     # print("after")
 
+    if result is None:
+        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
+    con.commit()
+    json_compatible_item_data = jsonable_encoder(result)
+    return JSONResponse(content=json_compatible_item_data)
+#
+@app.get("/statistic")
+async def getStatistic():
+    cur = con.cursor()
+    cur.execute(
+    """
+    SELECT 
+    COUNT(menu_statistic.id) AS total_asked,
+    SUM(CASE WHEN menu_statistic.accepted = true THEN 1 ELSE 0 END) AS accepted,
+    SUM(CASE WHEN menu_statistic.accepted = false THEN 1 ELSE 0 END) AS rejected,
+    SUM(menu_statistic.price) AS total_upsell_revenue
+    FROM menu_statistic"""
+    )
+    result = cur.fetchall()
+
+    if result is None:
+        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
+    con.commit()
+    json_compatible_item_data = jsonable_encoder(result)
+    return JSONResponse(content=json_compatible_item_data)
+@app.get("/orders/{num}")
+async def getOrdersById(num):
+    cur = con.cursor()
+    selectValue = (int(num),)
+    selectScript = "SELECT orders.*, sum(order_products.price) AS totalprice FROM orders JOIN order_products ON orders.id = order_products.order_id where orders.id = %s GROUP BY orders.id;"
+    cur.execute(selectScript,selectValue)
+    result = cur.fetchall()
+    if result is None:
+        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
+    con.commit()
+    json_compatible_item_data = jsonable_encoder(result)
+    return JSONResponse(content=json_compatible_item_data)
+
+@app.get("/orders/allproduct/{id}")
+async def getAllOrdersProductsById(id):
+    cur = con.cursor()
+    selectValue = (int(id),)
+    select_script = "SELECT menu.named, menu.types,order_products.price FROM menu JOIN order_products on order_products.menu_id = menu.id where order_products.order_id = %s"
+    cur.execute(select_script, selectValue)
+    result = cur.fetchall()
     if result is None:
         return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
     con.commit()
@@ -441,7 +492,7 @@ async def getTotalSum():
 async def getAverageSum():
     cur = con.cursor()
 
-    cur.execute("SELECT AVG(price) FROM order_products join menu on order_products.menu_id = menu.id")
+    cur.execute("SELECT SUM(order_products.price) / COUNT(DISTINCT orders.id) AS avg_order_number FROM orders JOIN order_products ON orders.id = order_products.order_id;")
     result = cur.fetchone()
     return result
 
@@ -463,6 +514,7 @@ async def getTotalByEveryProduct():
         items.append(twoitem)
 
     return items
+
 @app.get("/allproducts/priceEvery")
 async def getTotalByEveryProduct():
     cur = con.cursor()
@@ -505,6 +557,13 @@ def addNewProduct(newProduct):
     cur = con.cursor()
     insertScript = "Insert into menu(named, types, cost,stock) VALUES (%s, %s,%s,%s)"
     insertValue = (newProduct[0],newProduct[1],int(newProduct[2]),0,)
+    cur.execute(insertScript,insertValue)
+    con.commit()
+@app.post("/addMenuStatistic/")
+def addMenuStatistic(statistic):
+    cur = con.cursor()
+    insertScript = "Insert into menu_statistic(menu_id,accepted) VALUES (%s, %s)"
+    insertValue = (statistic[0],statistic[1])
     cur.execute(insertScript,insertValue)
     con.commit()
 @app.put("/addNewProduct/")
