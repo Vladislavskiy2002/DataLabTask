@@ -1,24 +1,20 @@
 import logging
-import os
-import random
-from datetime import date
 
 import openai
 import psycopg2
 from fastapi import FastAPI
-from fastapi.encoders import jsonable_encoder
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # <-- ADD THIS LINE
-from starlette.responses import JSONResponse
+
+from app.services.menu_service import *
+from app.services.order_service import *
 
 openai.organization = "org-2bXqWp423OEFqEdoPm8vbjAl"
-openai.api_key = os.getenv("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")
-
-from app.models import OrderiDTO
+openai.api_key = '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'
 
 app = FastAPI()
 
 # con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
-con = psycopg2.connect(dbname="postgres", user="postgres", host="35.222.13.116", password="1234")
+con = psycopg2.connect(dbname="postgres", user="postgres", host="34.28.70.151", password="1234")
 # con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
 con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
 
@@ -34,9 +30,12 @@ lastAdminAssistantResponce = ""
 flag = False
 start = False
 startAdmin = True
+
+
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
 
 @app.get("/admin/setToDefault")
 async def setStartProgramMessegeAsAdminByDefault():
@@ -149,8 +148,6 @@ async def handler(message: str):
         return "Something goes wrong ;("
 
 
-#
-
 @app.get("/handler/{message}")
 async def handler(message: str):
     global flag
@@ -208,7 +205,10 @@ async def handler(message: str):
             return "You can't do it because you haven't choose any product"
         chatHistory.append(
             (message, "The product with name: " + prompt + " has been successful removed from your list"))
-        await removeProduct(prompt)
+        if products.__contains__(prompt):
+            await removeProduct(prompt)
+        else:
+            return "You can't remove it because current product isn't exist in your list"
         return "The product with name: " + str(prompt) + " has been successful removed from your list"
     elif message.lower().startswith("show all"):
         result = await getAllProducts()
@@ -217,7 +217,7 @@ async def handler(message: str):
     elif message.lower().startswith("that's all"):
         total = await getTotalCost()
         chatHistory.append((message, "Your total is $" + total))
-        await addOrder(OrderiDTO)
+        await addOrder()
         await addChatHistory()
         return "Your total is $" + str(total)
     elif message.startswith("What's"):
@@ -234,17 +234,8 @@ async def handler(message: str):
 
 
 async def getTotalCost():
-    cur = con.cursor()
-
     global products
-    total = 0
-    for product in products:
-        select_value = (product,)
-        select_script = "SELECT cost FROM menu where named = %s"
-        cur.execute(select_script, select_value)
-        data = cur.fetchone()
-        total += int(data[0])
-    return total.__str__()
+    return await get_total_cost(con, products)
 
 
 @app.get("/product/remove/{name}")
@@ -266,291 +257,109 @@ async def getAllProducts():
 
 @app.get("/orders")
 async def getOrders():
-    cur = con.cursor()
-    cur.execute(
-        "SELECT orders.*, sum(order_products.price) AS avg_order_number FROM orders JOIN order_products ON orders.id = order_products.order_id GROUP BY orders.id;")
-    result = cur.fetchall()
-
-    if result is None:
-        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
-    con.commit()
-    json_compatible_item_data = jsonable_encoder(result)
-    return JSONResponse(content=json_compatible_item_data)
+    return await get_orders(con)
 
 
-#
 @app.get("/statistic")
 async def getStatistic():
-    cur = con.cursor()
-    cur.execute(
-        """
-        SELECT 
-        COUNT(menu_statistic.id) AS total_asked,
-        SUM(CASE WHEN menu_statistic.accepted = true THEN 1 ELSE 0 END) AS accepted,
-        SUM(CASE WHEN menu_statistic.accepted = false THEN 1 ELSE 0 END) AS rejected,
-        SUM(menu_statistic.price) AS total_upsell_revenue
-        FROM menu_statistic"""
-    )
-    result = cur.fetchall()
-
-    if result is None:
-        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
-    con.commit()
-    json_compatible_item_data = jsonable_encoder(result)
-    return JSONResponse(content=json_compatible_item_data)
+    return await get_statistic(con)
 
 
-@app.get("/orders/{num}")
-async def getOrdersById(num):
-    cur = con.cursor()
-    selectValue = (int(num),)
-    selectScript = "SELECT orders.*, sum(order_products.price) AS totalprice FROM orders JOIN order_products ON orders.id = order_products.order_id where orders.id = %s GROUP BY orders.id;"
-    cur.execute(selectScript, selectValue)
-    result = cur.fetchall()
-    if result is None:
-        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
-    con.commit()
-    json_compatible_item_data = jsonable_encoder(result)
-    return JSONResponse(content=json_compatible_item_data)
+@app.get("/orders/{id}")
+async def getOrdersById(id: str):
+    return await get_orders_by_id(con, id)
 
 
 @app.get("/orders/allproduct/{id}")
 async def getAllOrdersProductsById(id):
-    cur = con.cursor()
-    selectValue = (int(id),)
-    select_script = "SELECT menu.named, menu.types,order_products.price FROM menu JOIN order_products on order_products.menu_id = menu.id where order_products.order_id = %s"
-    cur.execute(select_script, selectValue)
-    result = cur.fetchall()
-    if result is None:
-        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
-    con.commit()
-    json_compatible_item_data = jsonable_encoder(result)
-    return JSONResponse(content=json_compatible_item_data)
+    return await get_all_orders_products_by_id(con, id)
 
 
-#
 @app.get("/menus")
 async def getMenu():
-    global products
-    cur = con.cursor()
-    cur.execute("SELECT * FROM menu")
-    result = cur.fetchall()
-    if result is None:
-        return JSONResponse(content="orders haven't found", status_code=status.HTTP_404_NOT_FOUND)
-    con.commit()
-    json_compatible_item_data = jsonable_encoder(result)
-    return JSONResponse(content=json_compatible_item_data)
+    return await get_menu(con)
 
 
 @app.get("/menus/{message}")
 async def getMenuByName(message: str):
-    cur = con.cursor()
-
-    global products
-
-    select_value = (message,)
-    select_script = "SELECT * FROM menu where named = %s"
-    # select_script = "select named,cost,stock FROM menu where named = %s"
-    cur.execute(select_script, select_value)
-    result = cur.fetchall()
-
-    if result is None or result.__len__() == 0:
-        return message + " isn't exist in our menu"
-    if result[0][4] == None or int(result[0][4]) == 0:
-        return "I’m sorry but we’re out of " + message
-    return result
+    return await get_menu_by_name(con, message)
 
 
 @app.post("/orders")
-async def addOrder(orders: OrderiDTO):
-    cur = con.cursor()
-
-    insert_orders_script = "Insert into orders(created_date,updated_date) VALUES (%s,%s)"
-
-    idProducts = []
-
-    for product in products:
-        select_value = (product,)
-        select_script = "SELECT * FROM menu where named = %s"
-        cur.execute(select_script, select_value)
-
-        result = cur.fetchone()
-
-        idProducts.append((result[0], result[3]))
-
-    products.clear()
-    insert_menu_orders_script = "Insert into order_products(order_id, menu_id,price) VALUES (%s,%s,%s)"
-    insert_orders_value = (date.today().isoformat(), date.today().isoformat())
-    cur.execute(insert_orders_script, insert_orders_value)
-
-    select_script = "SELECT MAX(id) FROM orders"
-    cur.execute(select_script)
-    orders_result = cur.fetchone()
-
-    con.commit()
-    for id in idProducts:
-        insert_menu_orders_value = (int.__int__(orders_result[0]), id[0], id[1])
-        cur.execute(insert_menu_orders_script, insert_menu_orders_value)
-        con.commit()
-
-    con.commit()
+async def addOrder():
+    global products
+    products = await add_order(con, products)
 
 
 @app.get("/allproducts/totalsum")
 async def getTotalSum():
-    cur = con.cursor()
-    cur.execute("SELECT SUM(price) FROM order_products  join menu on order_products.menu_id = menu.id")
-    result = cur.fetchone()
-    return result
+    return await get_total_sum(con)
 
 
-#
 @app.get("/allproducts/averagesum")
 async def getAverageSum():
-    cur = con.cursor()
-    cur.execute(
-        "SELECT SUM(order_products.price) / COUNT(DISTINCT orders.id) AS avg_order_number FROM orders JOIN order_products ON orders.id = order_products.order_id;")
-    result = cur.fetchone()
-    result = [str(round(result[0], 2))]
-    return result
+    return await get_average_sum(con)
 
 
 @app.get("/allproducts/totalevery")
 async def getTotalByEveryProduct():
-    cur = con.cursor()
-    cur.execute("SELECT * from menu")
-    result = cur.fetchall()
-    items = []
-    for r in result:
-        select_script = (
-            "SELECT SUM(price) FROM order_products JOIN menu on order_products.menu_id = menu.id where menu.id = %s")
-        select_value = (r[0],)
-        cur.execute(select_script, select_value)
-        sum = cur.fetchone()
-        twoitem = [r[1], sum[0], r[3], r[4]]
-        items.append(twoitem)
-    return items
+    return await get_total_by_every_product(con)
 
 
 @app.get("/allproducts/priceEvery")
 async def getTotalByEveryProduct():
-    cur = con.cursor()
-    cur.execute("SELECT cost from menu")
-    result = cur.fetchall()
-    return result
+    return await get_total_by_every_product(con)
 
 
 @app.get("/allproducts/chathistory")
 async def getChatHistory():
-    cur = con.cursor()
-    cur.execute("select user_messages, assistant_messages from order_messages")
-    result = cur.fetchall()
-    return result
+    return await get_ChatHistory(con)
 
 
 @app.get("/allproducts/chathistory/{id}")
 async def getChatHistoryById(id: int):
-    cur = con.cursor()
-    selectScript = "select user_messages, assistant_messages from order_messages where order_id = %s"
-    selectValue = (id,)
-    cur.execute(selectScript, selectValue)
-    result = cur.fetchall()
-    return result
+    return await get_chatHistory_by_id(con, id)
 
 
 @app.post("/addChatHistory/")
 async def addChatHistory():
-    cur = con.cursor()
-    cur.execute("SELECT max(id) FROM orders")
-    id = cur.fetchone()
-    insert_order_messages_script = "Insert into order_messages(order_id, user_messages, assistant_messages) VALUES (%s, %s,%s)"
-    for message in chatHistory:
-        insert_orders_value = (id[0], message[0], message[1],)
-        cur.execute(insert_order_messages_script, insert_orders_value)
-    chatHistory.clear()
+    global chatHistory
+    chatHistory = await add_chat_history(con, chatHistory)
 
 
 @app.post("/addNewProduct/")
 async def addNewProduct(newProduct):
-    cur = con.cursor()
-    insertScript = "Insert into menu(named, types, cost,stock) VALUES (%s, %s,%s,%s)"
-    insertValue = (newProduct[0], newProduct[1], int(newProduct[2]), 0,)
-    cur.execute(insertScript, insertValue)
-    con.commit()
+    await add_new_product(con, newProduct)
 
 
 @app.post("/addMenuStatistic/")
 async def addMenuStatistic(statistic):
-    cur = con.cursor()
-    insertScript = "Insert into menu_statistic(menu_id,accepted,price) VALUES (%s, %s,%s)"
-    insertValue = (statistic[0], statistic[1], statistic[2])
-    cur.execute(insertScript, insertValue)
-    con.commit()
+    await add_menu_statistic(con, statistic)
 
 
 @app.put("/addNewProduct/")
 async def updateNewProduct(newProduct):
-    cur = con.cursor()
-    updateScript = "UPDATE menu SET cost = %s WHERE named = %s and types = %s;"
-    updateValue = (int(newProduct[2]), newProduct[0], newProduct[1],)
-    cur.execute(updateScript, updateValue)
-    con.commit()
+    await update_new_product(con, newProduct)
 
 
 @app.put("/addNewProduct/")
 async def updateNewProductByStock(newProduct):
-    cur = con.cursor()
-    updateScript = "UPDATE menu SET stock = %s WHERE named = %s and types = %s;"
-    updateValue = (int(newProduct[2]), newProduct[0], newProduct[1],)
-    cur.execute(updateScript, updateValue)
-    con.commit()
+    await update_new_product_by_stock(con, newProduct)
 
 
 @app.get("/check/{message}")
 async def checkIfCurrentProductExistByName(message):
-    cur = con.cursor()
-    selectScript = "select named from menu where named = %s"
-    selectValue = (message,)
-    cur.execute(selectScript, selectValue)
-    result = cur.fetchall()
-    if result.__len__() == 0:
-        return False
-    else:
-        return True
+    await check_if_current_product_exist_by_name(con, message)
 
 
+@app.get("/checke/{message}")
 async def checkIfCurrentProductExistByType(message):
-    cur = con.cursor()
-    selectScript = "select types from menu where types = %s"
-    selectValue = (message,)
-    cur.execute(selectScript, selectValue)
-    result = cur.fetchall()
-    if result.__len__() == 0:
-        return False
-    else:
-        return True
+    return await check_if_current_product_exist_by_type(con, message)
 
 
 async def createRandomProduct():
-    cur = con.cursor()
-    selectScript = "select named,types, cost from menu where stock > 0"
-    cur.execute(selectScript)
-    result = cur.fetchall()
-    if result is None or len(result) == 0:
-        return "not found"
-    result = random.choice(result)
-
-    return result
+    return await create_random_product(con)
 
 
 async def reduceStockByProductNameAndType(someProduct):
-    cur = con.cursor()
-    selectScript = "SELECT stock from menu WHERE named = %s and types = %s;"
-    updateValue = (someProduct[0], someProduct[1],)
-    cur.execute(selectScript, updateValue)
-    stock = cur.fetchone()
-
-    selectScript = "UPDATE menu SET stock = %s WHERE named = %s and types = %s;"
-
-    updateValue = (stock[0] - 1, someProduct[0], someProduct[1])
-    cur.execute(selectScript, updateValue)
+    await reduce_stock_by_product_name_and_type(con, someProduct)

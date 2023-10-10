@@ -42,7 +42,8 @@ def display_all_orders():
                     products = requests.get("https://fastapi-project-k2w6seoxja-uc.a.run.app/orders/allproduct/" + id).json()
                     df_products = pd.DataFrame(products, columns=["name", "type", "price"])
                     st.dataframe(df_products)
-
+        elif not str(id).isdecimal():
+            st.warning("Id must be num!")
         # Display the orders table using a DataTable
         # Convert the result to a DataFrame
         df = pd.DataFrame(orders, columns=["id", "created_date", "updated_date", "price"])
