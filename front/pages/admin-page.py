@@ -25,10 +25,10 @@ def display_all_orders():
 
 
         id = st.text_input("Check order's data by order id:")
-        if(id.isalnum()):
+        if str(id).isdecimal():
             data = requests.get("https://fastapi-project-k2w6seoxja-uc.a.run.app/orders/" + id).json()
             if len(data) == 0:
-                st.write("Order with current id isn't exist!")
+                st.warning("Order with current id isn't exist!")
             else:
                 df = pd.DataFrame(data, columns=["id", "created_date", "updated_date", "price"])
                 df.rename(columns={"price": "total"}, inplace=True)  # Renaming the 'price' column to 'total'
@@ -42,7 +42,7 @@ def display_all_orders():
                     products = requests.get("https://fastapi-project-k2w6seoxja-uc.a.run.app/orders/allproduct/" + id).json()
                     df_products = pd.DataFrame(products, columns=["name", "type", "price"])
                     st.dataframe(df_products)
-        elif not str(id).isdecimal():
+        elif id != '' and not id.isdecimal():
             st.warning("Id must be num!")
         # Display the orders table using a DataTable
         # Convert the result to a DataFrame
