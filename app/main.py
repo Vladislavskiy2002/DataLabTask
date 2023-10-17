@@ -8,7 +8,6 @@ from services.menu_service import *
 from services.order_service import *
 
 openai.organization = "org-2bXqWp423OEFqEdoPm8vbjAl"
-openai.api_key = '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'
 
 app = FastAPI()
 
