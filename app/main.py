@@ -4,9 +4,9 @@ import psycopg2
 from fastapi import FastAPI
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # <-- ADD THIS LINE
 
-from app.services.menu_service import *
-from app.services.order_service import *
-from app.models.models import CoffeeShopStatus
+from services.menu_service import *
+from services.order_service import *
+from models.models import CoffeeShopStatus
 
 openai.organization = "org-2bXqWp423OEFqEdoPm8vbjAl"
 openai.api_key = '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'
@@ -47,140 +47,156 @@ async def getStartProgramMessege():
 
 @app.get("/admin/handler/{message}")
 async def handler(message: str):
+    if coffeeShopStatus.startAdmin:
+        if message.lower() in ["add", "update", "stock"]:
+            coffeeShopStatus.status = message.lower()
+            coffeeShopStatus.startAdmin = False
+            coffeeShopStatus.lastAdminAssistantResponce = "Enter the type of product"
+            return coffeeShopStatus.lastAdminAssistantResponce
 
-    if coffeeShopStatus.startAdmin and message.lower() == "add" or message.lower() == "update" or message.lower() == "stock":
-        coffeeShopStatus.status = message.lower()
-        coffeeShopStatus.startAdmin = False
-        coffeeShopStatus.lastAdminAssistantResponce = "Enter the type of product"
-        return coffeeShopStatus.lastAdminAssistantResponce
-    elif coffeeShopStatus.lastAdminAssistantResponce is "Enter the type of product":
+    elif coffeeShopStatus.lastAdminAssistantResponce == "Enter the type of product":
         coffeeShopStatus.newProductType = message
         coffeeShopStatus.startAdmin = False
         coffeeShopStatus.lastAdminAssistantResponce = "Enter the name of product"
         return coffeeShopStatus.lastAdminAssistantResponce
-    elif coffeeShopStatus.lastAdminAssistantResponce is "Enter the name of product":
-        print("print:" + coffeeShopStatus.status)
-        print(str(await checkIfCurrentProductExistByName(message)))
-        if await checkIfCurrentProductExistByName(message) and coffeeShopStatus.status == "add":
-            logging.info(await checkIfCurrentProductExistByName(message))
-            return "Product with current name has already exist. Try again to write the product's name:"
-        if await checkIfCurrentProductExistByName(message) and await checkIfCurrentProductExistByType(
-                coffeeShopStatus.newProductType) and coffeeShopStatus.status == "stock":
-            logging.info(await checkIfCurrentProductExistByName(message))
-            coffeeShopStatus.newProductName = message
-            coffeeShopStatus.lastAdminAssistantResponce = "Set the stock:"
-            return "Set the stock:"
-        elif coffeeShopStatus.status == "stock" and not await checkIfCurrentProductExistByName(message) and not await checkIfCurrentProductExistByType(
-                coffeeShopStatus.newProductType):
-            coffeeShopStatus.lastAdminAssistantResponce = ""
+
+    elif coffeeShopStatus.lastAdminAssistantResponce == "Enter the name of product":
+        if await checkIfCurrentProductExistByName(message):
+            if coffeeShopStatus.status == "add":
+                return "Product with current name already exists. Please enter a different product name:"
+            elif coffeeShopStatus.status == "stock" and await checkIfCurrentProductExistByType(
+                    coffeeShopStatus.newProductType):
+                coffeeShopStatus.newProductName = message
+                coffeeShopStatus.lastAdminAssistantResponce = "Set the stock:"
+                return coffeeShopStatus.lastAdminAssistantResponce
+
+        elif coffeeShopStatus.status == "stock":
             coffeeShopStatus.startAdmin = True
-            return "The product with name: " + message + " and type: " + coffeeShopStatus.newProductType + " isn't exist. Choose update, add or stock"
+            return f"The product with name: {message} and type: {coffeeShopStatus.newProductType} doesn't exist. Choose update, add, or stock."
 
         coffeeShopStatus.newProductName = message
         coffeeShopStatus.lastAdminAssistantResponce = "Enter the costs:"
         return coffeeShopStatus.lastAdminAssistantResponce
+
     elif coffeeShopStatus.lastAdminAssistantResponce == "Set the stock:":
         if not message.isdecimal():
-            return "the stock must be num. Try again"
+            return "The stock must be a number. Please try again."
         elif len(message) > 100:
-            return "the stock must be less that 100"
+            return "The stock must be less than 100."
         newProductStock = message
         newProduct = (coffeeShopStatus.newProductName, coffeeShopStatus.newProductType, newProductStock,)
         await updateNewProductByStock(newProduct)
         coffeeShopStatus.startAdmin = True
         coffeeShopStatus.lastAdminAssistantResponce = ""
-        return "The stock has been successfully set"
+        return "The stock has been successfully set."
+
     elif coffeeShopStatus.lastAdminAssistantResponce == "Enter the costs:":
-        coffeeShopStatus.newProductCost = message
         if not message.isdecimal():
-            return "the cost's must be num. Try again"
-        newProduct = (coffeeShopStatus.newProductName, coffeeShopStatus.newProductType, coffeeShopStatus.newProductCost,)
+            return "The cost must be a number. Please try again."
+        coffeeShopStatus.newProductCost = message
+        newProduct = (
+        coffeeShopStatus.newProductName, coffeeShopStatus.newProductType, coffeeShopStatus.newProductCost,)
         coffeeShopStatus.lastAdminAssistantResponce = ""
         if coffeeShopStatus.status == "add":
             await addNewProduct(newProduct)
             coffeeShopStatus.startAdmin = True
-            return "The product has been successfully added. Choose update, add or stock"
+            return "The product has been successfully added. Choose update, add, or stock."
         elif coffeeShopStatus.status == "update":
             coffeeShopStatus.startAdmin = True
             if await checkIfCurrentProductExistByName(
-                    coffeeShopStatus.newProductName) == True and await checkIfCurrentProductExistByType(coffeeShopStatus.newProductType) == True:
+                    coffeeShopStatus.newProductName) and await checkIfCurrentProductExistByType(
+                    coffeeShopStatus.newProductType):
                 await updateNewProduct(newProduct)
-                return "The product has been successfully updated. Choose update, add or stock"
+                return "The product has been successfully updated. Choose update, add, or stock."
             else:
-                return "The product with name: " + coffeeShopStatus.newProductName + " and type: " + coffeeShopStatus.newProductType + " isn't exist. Choose update, add or stock"
+                return f"The product with name: {coffeeShopStatus.newProductName} and type: {coffeeShopStatus.newProductType} doesn't exist. Choose update, add, or stock."
 
-    else:
-        return "Not correct input. Choose update, add or stock"
-
+    return "Not a valid input. Choose update, add, or stock."
 
 @app.get("/handler/{message}")
 async def handler(message: str):
     if coffeeShopStatus.start:
         coffeeShopStatus.start = False
         coffeeShopStatus.chatHistory.append(("Welcome at the coffee shop \n What would you like?"))
-        return "Welcome at the coffee shop \n What would you like? "
+        return "Welcome at the coffee shop \n What would you like?"
+
     if coffeeShopStatus.flag:
         if message.lower() == "yes":
-            coffeeShopStatus.flag = False
             product_id = await getMenuByName(coffeeShopStatus.newRandomProduct[0])
             await addMenuStatistic((product_id[0][0], True, product_id[0][3]))
             coffeeShopStatus.products.append(coffeeShopStatus.newRandomProduct[0])
-            await reduceStockByProductNameAndType([coffeeShopStatus.newRandomProduct[0], coffeeShopStatus.newRandomProduct[1]])
+            await reduceStockByProductNameAndType(
+                [coffeeShopStatus.newRandomProduct[0], coffeeShopStatus.newRandomProduct[1]])
             coffeeShopStatus.chatHistory.append(
-                (message, "The " + str(coffeeShopStatus.newRandomProduct[0]) + " has been successfully added to your order"))
-            return "The " + str(coffeeShopStatus.newRandomProduct[0]) + " has been successfully added to your order"
+                (message, f"The {coffeeShopStatus.newRandomProduct[0]} has been successfully added to your order"))
+            return f"The {coffeeShopStatus.newRandomProduct[0]} has been successfully added to your order"
+
         elif message.lower() == "no":
             product_id = await getMenuByName(coffeeShopStatus.newRandomProduct[0])
             await addMenuStatistic((product_id[0][0], False, product_id[0][3]))
             coffeeShopStatus.flag = False
             coffeeShopStatus.chatHistory.append((message, "Would you like something else?"))
             return "Would you like something else?"
+
         else:
             coffeeShopStatus.chatHistory.append((message, "I don't understand you. Try again"))
             return "I don't understand you. Try again"
 
-    if message.lower().startswith("i'd like a "):
+    elif message.lower().startswith("i'd like a "):
         prompt = message.lower().replace("i'd like a ", '', 1)
         data = await getMenuByName(prompt)
-        if data == prompt.__str__() + " isn't exist in our menu":
-            coffeeShopStatus.chatHistory.append((message, prompt.__str__() + " isn't exist in our menu"))
-            return prompt.__str__() + " isn't exist in our menu"
-        if data == "I’m sorry but we’re out of " + str(prompt):
-            coffeeShopStatus.chatHistory.append((message, "I’m sorry but we’re out of " + str(prompt)))
-            return "I’m sorry but we’re out of " + str(prompt)
+
+        if data == f"{prompt} isn't exist in our menu":
+            coffeeShopStatus.chatHistory.append((message, f"{prompt} isn't exist in our menu"))
+            return f"{prompt} isn't exist in our menu"
+
+        if data == f"I’m sorry but we’re out of {prompt}":
+            coffeeShopStatus.chatHistory.append((message, f"I’m sorry but we’re out of {prompt}"))
+            return f"I’m sorry but we’re out of {prompt}"
+
         coffeeShopStatus.products.append(prompt)
         await reduceStockByProductNameAndType([data[0][1], data[0][2]])
         coffeeShopStatus.flag = True
         coffeeShopStatus.newRandomProduct = await createRandomProduct()
+
         if coffeeShopStatus.newRandomProduct == "not found":
             coffeeShopStatus.flag = False
             coffeeShopStatus.chatHistory.append("Would you like something else?")
             return "Would you like something else?"
-        coffeeShopStatus.chatHistory.append((message, "Would you like to add a " + str(coffeeShopStatus.newRandomProduct[0]) + " for $" + str(
-            coffeeShopStatus.newRandomProduct[2]) + "?"))
-        return "Would you like to add a " + str(coffeeShopStatus.newRandomProduct[0]) + " for $" + str(coffeeShopStatus.newRandomProduct[2]) + "?"
+
+        coffeeShopStatus.chatHistory.append((message,
+                                             f"Would you like to add a {coffeeShopStatus.newRandomProduct[0]} for ${coffeeShopStatus.newRandomProduct[2]}?"))
+        return f"Would you like to add a {coffeeShopStatus.newRandomProduct[0]} for ${coffeeShopStatus.newRandomProduct[2]}?"
+
     elif message.startswith("I don't want a "):
         prompt = message.replace("I don't want a ", '', 1)
-        if coffeeShopStatus.products.__len__() == 0:
-            coffeeShopStatus.chatHistory.append((message, "You can't do it because you haven't choose any product"))
-            return "You can't do it because you haven't choose any product"
+
+        if not coffeeShopStatus.products:
+            coffeeShopStatus.chatHistory.append((message, "You can't do it because you haven't chosen any product"))
+            return "You can't do it because you haven't chosen any product"
+
         coffeeShopStatus.chatHistory.append(
-            (message, "The product with name: " + prompt + " has been successful removed from your list"))
-        if coffeeShopStatus.products.__contains__(prompt):
+            (message, f"The product with name: {prompt} has been successfully removed from your list"))
+
+        if prompt in coffeeShopStatus.products:
             await removeProduct(prompt)
         else:
-            return "You can't remove it because current product isn't exist in your list"
-        return "The product with name: " + str(prompt) + " has been successful removed from your list"
+            return f"You can't remove it because the product {prompt} isn't in your list"
+
+        return f"The product with name: {prompt} has been successfully removed from your list"
+
     elif message.lower().startswith("show all"):
         result = await getAllProducts()
         coffeeShopStatus.chatHistory.append((message, str(result)))
-        return await getAllProducts()
+        return str(result)
+
     elif message.lower().startswith("that's all"):
         total = await getTotalCost()
-        coffeeShopStatus.chatHistory.append((message, "Your total is $" + total))
+        coffeeShopStatus.chatHistory.append((message, f"Your total is ${total}"))
         await addOrder()
         await addChatHistory()
-        return "Your total is $" + str(total)
+        return f"Your total is ${total}"
+
     elif message.startswith("What's"):
         response = openai.Completion.create(
             engine="text-davinci-003",
@@ -189,13 +205,14 @@ async def handler(message: str):
             max_tokens=100
         )
         return response.choices[0].text.strip()
+
     else:
-        coffeeShopStatus.chatHistory.append((message, "Sorry, but i don't understand you"))
-        return "Sorry, but i don't understand you"
+        coffeeShopStatus.chatHistory.append((message, "Sorry, but I don't understand you"))
+        return "Sorry, but I don't understand you"
 
 
 async def getTotalCost():
-    # global products
+# global products
     return await get_total_cost(con, coffeeShopStatus.products)
 
 
