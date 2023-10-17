@@ -1,49 +1,21 @@
-import logging
 import openai
 import psycopg2
 from fastapi import FastAPI
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # <-- ADD THIS LINE
 
+from models.models import CoffeeShopStatus
 from services.menu_service import *
 from services.order_service import *
-from models.models import CoffeeShopStatus
 
 openai.organization = "org-2bXqWp423OEFqEdoPm8vbjAl"
-openai.api_key = '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'
+openai.api_key = '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'
 
 app = FastAPI()
 
-# con = psycopg2.connect(dbname="postgres", user="postgres", host="localhost", password="1234")
-
-# !!!!!При Push на гітхаб забрав актуальний конекшн, щоб боти не взламували мою БД!!!!
-
-# con = psycopg2.connect(dbname="postgres", user="postgres", host="db", password="1234")
+con = psycopg2.connect(dbname="postgres", user="postgres", host="34.69.148.234", password="Greta22")
 con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
 
 coffeeShopStatus = CoffeeShopStatus()
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-@app.get("/admin/setToDefault")
-async def setStartProgramMessegeAsAdminByDefault():
-    coffeeShopStatus.startAdmin = True
-    return True
-
-
-@app.get("/setToDefault")
-async def setStartProgramMessegeAsUserByDefault():
-    coffeeShopStatus.reset_variables()
-
-@app.get("/startprogram")
-async def getStartProgramMessege():
-    # global start
-    if coffeeShopStatus.start:
-        coffeeShopStatus.start = False
-        return "Welcome at the coffee shoP What would you like?"
-
 
 @app.get("/admin/handler/{message}")
 async def handler(message: str):
@@ -95,7 +67,7 @@ async def handler(message: str):
             return "The cost must be a number. Please try again."
         coffeeShopStatus.newProductCost = message
         newProduct = (
-        coffeeShopStatus.newProductName, coffeeShopStatus.newProductType, coffeeShopStatus.newProductCost,)
+            coffeeShopStatus.newProductName, coffeeShopStatus.newProductType, coffeeShopStatus.newProductCost,)
         coffeeShopStatus.lastAdminAssistantResponce = ""
         if coffeeShopStatus.status == "add":
             await addNewProduct(newProduct)
@@ -105,13 +77,14 @@ async def handler(message: str):
             coffeeShopStatus.startAdmin = True
             if await checkIfCurrentProductExistByName(
                     coffeeShopStatus.newProductName) and await checkIfCurrentProductExistByType(
-                    coffeeShopStatus.newProductType):
+                coffeeShopStatus.newProductType):
                 await updateNewProduct(newProduct)
                 return "The product has been successfully updated. Choose update, add, or stock."
             else:
                 return f"The product with name: {coffeeShopStatus.newProductName} and type: {coffeeShopStatus.newProductType} doesn't exist. Choose update, add, or stock."
 
     return "Not a valid input. Choose update, add, or stock."
+
 
 @app.get("/handler/{message}")
 async def handler(message: str):
@@ -212,7 +185,7 @@ async def handler(message: str):
 
 
 async def getTotalCost():
-# global products
+    # global products
     return await get_total_cost(con, coffeeShopStatus.products)
 
 
@@ -228,7 +201,6 @@ async def getAllProducts():
     nameOfProducts = []
     for product in coffeeShopStatus.products:
         nameOfProducts.append(product)
-    json_compatible_item_data = jsonable_encoder(coffeeShopStatus.products)
     return nameOfProducts
 
 
@@ -332,6 +304,16 @@ async def checkIfCurrentProductExistByName(message):
 @app.get("/checke/{message}")
 async def checkIfCurrentProductExistByType(message):
     return await check_if_current_product_exist_by_type(con, message)
+
+@app.get("/admin/setToDefault")
+async def setStartProgramMessegeAsAdminByDefault():
+    coffeeShopStatus.startAdmin = True
+    return True
+
+
+@app.get("/setToDefault")
+async def setStartProgramMessegeAsUserByDefault():
+    coffeeShopStatus.reset_variables()
 
 
 async def createRandomProduct():

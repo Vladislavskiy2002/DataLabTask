@@ -159,7 +159,6 @@ async def get_menu_by_name(con, message: str):
 
     select_value = (message,)
     select_script = "SELECT * FROM menu where named = %s"
-    # select_script = "select named,cost,stock FROM menu where named = %s"
     cur.execute(select_script, select_value)
     result = cur.fetchall()
 
