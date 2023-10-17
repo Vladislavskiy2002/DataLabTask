@@ -11,7 +11,6 @@ openai.organization = "org-2bXqWp423OEFqEdoPm8vbjAl"
 
 app = FastAPI()
 
-con = psycopg2.connect(dbname="postgres", user="postgres", host="34.69.148.234", password="Greta22")
 con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  # <-- ADD THIS LINE
 
 coffeeShopStatus = CoffeeShopStatus()
